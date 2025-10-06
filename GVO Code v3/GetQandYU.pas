@@ -1,69 +1,100 @@
 unit GetQandYU;
 //
-// updated for gvo fork mount    6/1/08
+// Updated for GVO fork mount 6/1/08
 //
+
 interface
-Procedure GetQandY(ra,dec:Real; var Alt,HA,xcount,ycount:Real ;var q,y : integer);
+
+procedure GetQandY(ra, dec: Real; var Alt, HA, xcount, ycount: Real; var q, y: Integer);
+
 implementation
 
-uses Main, Utils,Math;
-Procedure GetQandY(ra,dec:Real; var Alt,HA,xcount,ycount:Real ;var q,y : integer);
-//
-//get q and y gets quadrant,ha,alt,xcount,ycount and ypole of current ra,dec
-//
+uses
+	Main, Utils, Math;
 
-Begin
-MainForm.Timer_Main.Enabled := false;   //don't allow other calls
-  Meridian := GetStime;
-  EastHor := Meridian + 6.0;        //ha at east horizon
-  WestHor := Meridian - 6.0;        //ha at west horizon
-  If(WestHor < 0.0) Then WestHor := WestHor + 24.0 ;
-  If(EastHor > 24.0) then EastHor  := EastHor - 24.0 ;
-  EastHA := -6;
-  NorthHA := 12;
-  WestHA := 6;
-  SouthHA := 0;
-//
-//Get Altitude
-//
-  HA := 15*(Meridian -  Ra);
-  Alt := ArcSin((Sin(DToR*Dec)*sin(DToR*c_Lat)) + (cos(DToR*dec)*cos(DToR*HA)*cos(DToR*C_Lat)) );
-  Alt := RToD * Alt ;   //A = -90 to +90  degrees Altitude
-//
-//get Ypole
-//
-  HA := (Meridian - Ra);
-  If(HA < -12) Then HA := HA + 24;
-  if(HA > 12) Then HA := HA - 24;
-  if((HA <=  SouthHA ) AND (HA >= EastHA)) Then  Begin Y := 1; Q := 1 End
-  Else if((HA < EastHA) AND (HA > -NorthHA)) Then  Begin Y := -1; Q := 2 End
-  Else if((HA >= SouthHA ) AND (HA <= WestHA)) Then  Begin Y := 1; Q := 3  End
-  Else if((HA > WestHA ) AND (HA < NorthHA)) Then  Begin Y := -1; Q := 4 End ;
-//
-// get position counts  -  Dec First
-// dec stepper counts positive when north of zenith(> lat), neg when south of zenith (< lat)
-//
-  if( dec >= c_lat) then
-  begin   //counts positive
-    ycount := (dec - c_lat)* DecFact;
-  end
-  else
-  begin
-    ycount := -1*((c_lat - dec) * DecFact);
-  end;
-//
-// Get Ra Counts
-// east of meridian is neg counts     (-ha)
-// west of meridian is positive counts    (+ha)
-//
-   xcount :=  (HA * 15)  * RaFact;
+procedure GetQandY(ra, dec: Real; var Alt, HA, xcount, ycount: Real; var q, y: Integer);
 
-//from german equatorial model
-//   if((Q=1)) Then  Xcount := ( (6.0 - abs(TempHa)) * 15)* RaFact
-//   Else if((Q=2)) Then  Xcount := ( (abs(TempHa)-6.0) * 15)* RaFact
-//   Else if((Q=3)) Then  Xcount := ( (abs(TempHa) - 6.0) * 15)* RaFact
-//   Else if((Q=4)) Then  Xcount := ( (6.0 - abs(TempHa)) * 15)* RaFact ;
-//   if((q = 4) OR (q = 2)) Then  Xcount := Xcount * -1.0 ;
-   MainForm.Timer_Main.Enabled := True;
-   End;
+// GetQandY gets quadrant, HA, Alt, xcount, ycount, and ypole of current RA/Dec
+
+begin
+	MainForm.Timer_Main.Enabled := False;	// don't allow other calls
+
+	Meridian := GetStime;
+	EastHor := Meridian + 6.0;				// ha at east horizon
+	WestHor := Meridian - 6.0;				// ha at west horizon
+
+	if (WestHor < 0.0) then
+		WestHor := WestHor + 24.0;
+	if (EastHor > 24.0) then
+		EastHor := EastHor - 24.0;
+
+	EastHA := -6;
+	NorthHA := 12;
+	WestHA := 6;
+	SouthHA := 0;
+
+	// Get Altitude
+	HA := 15 * (Meridian - Ra);
+	Alt := ArcSin(
+		(Sin(DToR * Dec) * Sin(DToR * c_Lat)) +
+		(Cos(DToR * Dec) * Cos(DToR * HA) * Cos(DToR * C_Lat))
+	);
+	Alt := RToD * Alt;	// A = -90 to +90 degrees Altitude
+
+	// Get Ypole
+	HA := (Meridian - Ra);
+	if (HA < -12) then
+		HA := HA + 24;
+	if (HA > 12) then
+		HA := HA - 24;
+
+	if ((HA <= SouthHA) and (HA >= EastHA)) then
+	begin
+		Y := 1;
+		Q := 1;
+	end
+	else if ((HA < EastHA) and (HA > -NorthHA)) then
+	begin
+		Y := -1;
+		Q := 2;
+	end
+	else if ((HA >= SouthHA) and (HA <= WestHA)) then
+	begin
+		Y := 1;
+		Q := 3;
+	end
+	else if ((HA > WestHA) and (HA < NorthHA)) then
+	begin
+		Y := -1;
+		Q := 4;
+	end;
+
+	// Get position counts - Dec first
+	// Dec stepper counts positive when north of zenith (> lat),
+	// negative when south of zenith (< lat)
+	if (Dec >= c_Lat) then
+	begin
+		// counts positive
+		ycount := (Dec - c_Lat) * DecFact;
+	end
+	else
+	begin
+		ycount := -1 * ((c_Lat - Dec) * DecFact);
+	end;
+
+	// Get RA Counts
+	// East of meridian is negative counts (-HA)
+	// West of meridian is positive counts (+HA)
+	xcount := (HA * 15) * RaFact;
+
+	// From german equatorial model
+	// if (Q = 1) then Xcount := ((6.0 - abs(TempHa)) * 15) * RaFact
+	// else if (Q = 2) then Xcount := ((abs(TempHa) - 6.0) * 15) * RaFact
+	// else if (Q = 3) then Xcount := ((abs(TempHa) - 6.0) * 15) * RaFact
+	// else if (Q = 4) then Xcount := ((6.0 - abs(TempHa)) * 15) * RaFact;
+	// if ((Q = 4) or (Q = 2)) then Xcount := Xcount * -1.0;
+
+	MainForm.Timer_Main.Enabled := True;
+end;
+
 end.
