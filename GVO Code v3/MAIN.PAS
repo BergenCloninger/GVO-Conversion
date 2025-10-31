@@ -7,7 +7,7 @@ interface
 
 uses
 	SysUtils, WinTypes, WinProcs, Messages, Classes, Graphics, Controls,
-	Forms, Dialogs, ExtCtrls, StdCtrls, Spin, ComCtrls,Inifiles,dbpwdlg;
+	Forms, Dialogs, ExtCtrls, StdCtrls, Spin, ComCtrls,Inifiles,dbpwdlg; //here
 
 
 type

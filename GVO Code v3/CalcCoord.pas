@@ -18,7 +18,7 @@ Label DoDec;
 //  read stepper counts
 //  x = ra, y = dec
 //
-Begin {Update coord}    {from stepper controller}
+Begin {Update coord}    {from stepper controller} //here
 	thandle := 0;
 	MainForm.labeltkrate.Caption := floattostr(TrkRate);
 	if(MainForm.PanelStatus.Visible = True) Then  MainForm.PanelStatus.Visible := False     //blink active indicator
