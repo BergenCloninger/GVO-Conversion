@@ -7,7 +7,7 @@ interface
 
 uses
 	SysUtils, WinTypes, WinProcs, Messages, Classes, Graphics, Controls,
-	Forms, Dialogs, ExtCtrls, StdCtrls, Spin, ComCtrls,Inifiles,dbpwdlg; //here
+	Forms, Dialogs, ExtCtrls, StdCtrls, Spin, ComCtrls,Inifiles,dbpwdlg;
 
 
 type
@@ -201,7 +201,7 @@ var
 	MovingRA : Boolean ;
 	MovingDEC : Boolean ;
 	Ypole : integer ;     // neg when Object Below the Pole
-var
+var //here
 	MainForm: TMainForm;
 	XState,Ystate : StateVar;
 	io : byte;
