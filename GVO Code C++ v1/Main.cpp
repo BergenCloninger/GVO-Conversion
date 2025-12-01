@@ -4,10 +4,14 @@
 #include <cmath>
 #include <functional> //this may or may not be required
 #include <cstdint>
+// #include "TimerUnit.h"
+// #include "Utils"
+// #include "OMS68SERMC"
 
 //variable definitions:
 // record = struct
 // real = double
+// StateVar = enum class
 struct Coord {
     double RA;
     double Dec;
@@ -30,17 +34,17 @@ enum class Statevar {
 };
 
 class TelescopeControl {
-public:
-	void Initialize();
-	void JogNorth();
-	void JogSouth();
-	void JogEast();
-	void JogWest();
-	void Stop();
-	void Park();
+    public:
+        void Initialize();
+        void JogNorth();
+        void JogSouth();
+        void JogEast();
+        void JogWest();
+        void Stop();
+        void Park();
 
-private:
-	void DLLWork(int i);
+    private:
+        void DLLWork(int i);
 };
 
 // (*
@@ -114,9 +118,13 @@ std::string yvlslew; //computer slew
 std::string xvl5inch; //5 inch auto guide 
 std::string yvl5inch; //5 inc auto guide
 std::string xvl; //tracking adjustment
-std::string xac, xacmax, xvlmax; 
+std::string xac;
+std::string xacmax;
+std::string xvlmax; 
 std::string yvl; //tracking adjustment
-std::string yac, yacmax, yvlmax;
+std::string yac;
+std::string yacmax;
+std::string yvlmax;
 double RAFact;
 double DECFACT;
 int DecBack; //backlash
@@ -137,3 +145,83 @@ int targetQuadrant;
 bool movingRA;
 bool movingDEC;
 int yPole; // neg when Object Below the Pole
+
+TelescopeControl* telescopeControl; //could rename this
+enum class StateVar {
+    XState,
+    YState
+};
+uint8_t io;
+bool EastPushed;
+bool WestPushed;
+bool NorthPushed;
+bool SouthPushed;
+bool ManualPushed;
+double SidTimeFract;
+double SidTime;
+double RANow;
+double DECNow;
+double azimuth;
+int RAHr;
+int RAMin;
+int RASec;
+int DECDeg;
+int DECMin;
+int DECSec;
+int altdeg;
+int altmin;
+int altsec;
+int azdeg;
+int azmin;
+int azsec;
+double RaTarget;
+double DecTarget;
+double Meridian;
+double EastHor;
+double WestHor;
+double EastHA;
+double WestHA;
+double NorthHA;
+double SouthHA;
+double A;
+double H;
+double RaPos;
+double decPos;
+double tdecfact;
+bool Parkit;
+bool NorthofZenith;
+bool NoPassword;
+
+//"uses" move to include block at top
+
+void loadparams() { //coudl not find ini, hoping default values are correct :)
+    tdecfact = ((360/338) * 3600) / 50000;
+    tdecfact = 1 / tdecfact;
+    tdecfact = tdecfact * 3600;
+
+    TrkRate = 500.6;
+    xvlslew = 75000;
+    yvlslew = 50000;
+    xvl5inch = 2000;
+    yvl5inch = 2000;
+    xvl = 10000;
+    xac = 35000;
+    yvl = 5000;
+    yac = 25000;
+
+    yacmax = "25000"; //not sure why these are strings lowkey
+    yvlmax = "100000";
+    xacmax = "35000";
+    xvlmax = "75000";
+}
+
+//skipping gui procedures
+//rewriting jog commands to be called from console:
+
+void jogNorthCommand() {
+    if (!LastDecNorth) {
+        // BumpNorth(); //TODO: Implementation 
+    }
+}
+
+//TODO 
