@@ -201,8 +201,8 @@ var
 	MovingRA : Boolean ;
 	MovingDEC : Boolean ;
 	Ypole : integer ;     // neg when Object Below the Pole
-var //here
-	MainForm: TMainForm;
+var
+	MainForm: TMainForm; //TMainFrom = telescope control class
 	XState,Ystate : StateVar;
 	io : byte;
 	EastPushed,WestPushed,NorthPushed,SouthPushed,ManualPushed : boolean ;
@@ -215,7 +215,7 @@ var //here
 	Parkit,NorthofZenith,NoPassword : Boolean;
 implementation
 
-uses TimerUnit, Utils, OMS68SERMC;
+uses TimerUnit, Utils, OMS68SERMC; // should be at top
 
 {$R *.DFM}
 //local subs

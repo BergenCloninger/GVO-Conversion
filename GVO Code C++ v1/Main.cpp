@@ -223,5 +223,3 @@ void jogNorthCommand() {
         // BumpNorth(); //TODO: Implementation 
     }
 }
-
-//TODO 
