@@ -1,17 +1,12 @@
 #include <iostream>
 #include <string>
-#include <fstream>
 #include <cmath>
-#include <functional> //this may or may not be required
 #include <cstdint>
-// #include "TimerUnit.h"
-// #include "Utils"
-// #include "OMS68SERMC"
+#include <functional>
+#include "OMS68SERMC.h"
+#include <windows.h>
 
-//variable definitions:
-// record = struct
-// real = double
-// StateVar = enum class
+// ------------------------- Structs & Types -------------------------
 struct Coord {
     double RA;
     double Dec;
@@ -23,7 +18,7 @@ struct Coord {
 
 using TeleAPICallBack = std::function<void(int)>;
 
-enum class Statevar {
+enum class StateVar {
     Off,
     Tracking,
     CorrectingE,
@@ -33,193 +28,268 @@ enum class Statevar {
     Slewing
 };
 
-class TelescopeControl {
-    public:
-        void Initialize();
-        void JogNorth();
-        void JogSouth();
-        void JogEast();
-        void JogWest();
-        void Stop();
-        void Park();
-
-    private:
-        void DLLWork(int i);
-};
-
-// (*
-// //GVO
-// //*******************************************************************************
-// RA
-// tracking rate -       SID=1.00273790935  solar time / sidereal time
-
-// gear ration = 480/1
-// 	1 rev of worm = 360/480 = .75 degrees of sky  = 2700  ArcSec  of sky
-
-// 	stepper = 5,000 usteps /rev X 18 gear reduction =  90,000 usteps/rev of worm
-// 	1 rev of worm  2700 arc sec sky
-// 	1 ustep of worm  = .03  arc sec of sky(2700/90,000)  = 33.3333333   usteps/arc sec
-// 	1 ustep of worm = .046875 arc sec sky       = 21.3333 usteps / arc sec
-// 	33.3333333  usteps/arc sec   =  120,000 usteps/deg
-
-// tracking = 14.959043494948 arcsec/sec = 498.635 usteps/sec  trackking rate
-
-// 	RA FACT (steps/deg) = 120,000
-// //********************************************************************************************
-// DEC
-	
-// 	gear ration = 338/1
-// 	1 rev of worm = 360/338 = 1.0650887573964497 degrees of sky  = 3834.31952  ArcSec  of sky
-
-// 	stepper = 50,000 usteps/rev of worm
-// 	1 rev of worm  3834.31952  arc sec sky
-// 	1 ustep of worm  = .0766863905 arc sec of sky(3834.31952/50000)  = 13.040123456   usteps/arc sec
-// 	13.040123456  usteps/arc sec   =  46944.4444 usteps/deg
-// 	Dec fact (steps/deg) = 46944.4444
-
-
-// *)
-
-const bool EastOfMeridian = true;
-const bool LookingEast = true;
-const bool TargetEastOfMeridian = true;
-const bool LastDecNorth = true;
-// quadrant = 1 when east of meridian and above the pole
-// quadrant = 2 when east of meridian and Below the pole
-// quadrant = 3 when west of meridian and above the pole
-// quadrant = 4 when west of meridian and Below the pole
-//
-// when below pole "EastofMeridian" is opposite of above the pole!!!!
-//
-//Also OMS board uses IRQ 5
-const uint16_t Data_reg    = 0x300;
-const uint16_t Done_reg    = 0x301;
-const uint16_t Control_reg = 0x302;
-const uint16_t Status_reg  = 0x303;
-
-const uint8_t Cmderr_bit = 0x01;
-const uint8_t Init_Bit   = 0x02;
-const uint8_t Enc_bit    = 0x04;
-const uint8_t Ovrt_bit   = 0x08;
-const uint8_t Done_bit   = 0x10;
-const uint8_t Ibf_bit    = 0x20;
-const uint8_t Tbe_bit    = 0x40;
-const uint8_t Irq_bit    = 0x80;
-
-const uint8_t EastBit   = 0x04;
-const uint8_t WestBit   = 0x08;
-const uint8_t NorthBit  = 0x01;
-const uint8_t SouthBit  = 0x02;
-const uint8_t ManualBit = 0x01;
-
+// ------------------------- Telescope Globals -------------------------
 double TrkRate;
-std::string xvlslew; //computer slew    
-std::string yvlslew; //computer slew    
-std::string xvl5inch; //5 inch auto guide 
-std::string yvl5inch; //5 inc auto guide
-std::string xvl; //tracking adjustment
-std::string xac;
-std::string xacmax;
-std::string xvlmax; 
-std::string yvl; //tracking adjustment
-std::string yac;
-std::string yacmax;
-std::string yvlmax;
-double RAFact;
-double DECFACT;
-int DecBack; //backlash
-double C_Lat;
-double C_Long;
+std::string xvlslew, yvlslew, xvl5inch, yvl5inch;
+std::string xvl, xac, xacmax, xvlmax, yvl, yac, yacmax, yvlmax;
+double RAFact, DECFACT;
+int DecBack;
+double C_Lat, C_Long;
+int yPole = 1;
+bool LastDecNorth = true;
+bool SlewSelect = true;
 
-uint8_t keystroke;
-uint8_t pcxdataout;
-uint8_t status;
+bool EastOfMeridian = true;
+bool LookingEast = true;
+bool TargetEastOfMeridian = true;
 
-std::string name;
-std::string commandBuffer;
-
+uint8_t keystroke, pcxdataout, status;
+std::string name, commandBuffer;
 void* pndomem;
 uint8_t halfSecondCounter;
-int quadrant;
-int targetQuadrant;
-bool movingRA;
-bool movingDEC;
-int yPole; // neg when Object Below the Pole
-
-TelescopeControl* telescopeControl; //could rename this
-enum class StateVar {
-    XState,
-    YState
-};
+int quadrant, targetQuadrant;
+bool movingRA, movingDEC;
 uint8_t io;
-bool EastPushed;
-bool WestPushed;
-bool NorthPushed;
-bool SouthPushed;
-bool ManualPushed;
-double SidTimeFract;
-double SidTime;
-double RANow;
-double DECNow;
-double azimuth;
-int RAHr;
-int RAMin;
-int RASec;
-int DECDeg;
-int DECMin;
-int DECSec;
-int altdeg;
-int altmin;
-int altsec;
-int azdeg;
-int azmin;
-int azsec;
-double RaTarget;
-double DecTarget;
-double Meridian;
-double EastHor;
-double WestHor;
-double EastHA;
-double WestHA;
-double NorthHA;
-double SouthHA;
-double A;
-double H;
-double RaPos;
-double decPos;
-double tdecfact;
-bool Parkit;
-bool NorthofZenith;
-bool NoPassword;
+bool EastPushed, WestPushed, NorthPushed, SouthPushed, ManualPushed;
+double SidTimeFract, SidTime, RANow, DECNow, azimuth;
+int RAHr, RAMin, RASec;
+int DECDeg, DECMin, DECSec;
+int altdeg, altmin, altsec, azdeg, azmin, azsec;
+double RaTarget, DecTarget, Meridian, EastHor, WestHor;
+double EastHA, WestHA, NorthHA, SouthHA, A, H;
+double RaPos, decPos, tdecfact;
+bool Parkit, NorthofZenith, NoPassword;
 
-//"uses" move to include block at top
+// ------------------------- DLL Function Pointers -------------------------
+typedef long(__stdcall* InitOmsCommPort_t)(SCOMM_STRUCT*);
+typedef long(__stdcall* SendString_t)(SCOMM_STRUCT*, char*);
 
-void loadparams() { //coudl not find ini, hoping default values are correct :)
-    tdecfact = ((360/338) * 3600) / 50000;
-    tdecfact = 1 / tdecfact;
-    tdecfact = tdecfact * 3600;
+SCOMM_STRUCT CommRecord = {};
+static HMODULE DLLHandle = nullptr;
+static InitOmsCommPort_t pInitOmsCommPort = nullptr;
+static SendString_t pSendString = nullptr;
+
+void PrintLastError() {
+    DWORD err = GetLastError();
+    LPVOID msgBuf;
+    FormatMessage(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr,
+        err,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPTSTR)&msgBuf,
+        0, nullptr);
+    std::cerr << "LoadLibrary failed: " << (char*)msgBuf << std::endl;
+    LocalFree(msgBuf);
+}
+
+bool LoadDLL() {
+    HMODULE hDLL = LoadLibraryA("68SERMC.DLL");
+    if (!hDLL) {
+        DWORD err = GetLastError();
+        std::cerr << "LoadLibrary failed, error code: " << err << std::endl;
+    }
+    DLLHandle = LoadLibraryA("E:\\VSCode Projects\\Observatory Code Conversion\\GVO-Conversion\\GVO Code C++ v1\\68SERMC.DLL");
+    if (!DLLHandle) {
+        std::cerr << "Error: 68SERMC.DLL could not be loaded!" << std::endl;
+        return false;
+    }
+    pInitOmsCommPort = reinterpret_cast<InitOmsCommPort_t>(GetProcAddress(DLLHandle, "InitOmsCommPort"));
+    pSendString = reinterpret_cast<SendString_t>(GetProcAddress(DLLHandle, "SendString"));
+    if (!pInitOmsCommPort || !pSendString) {
+        std::cerr << "Error: Could not get function addresses!" << std::endl;
+        FreeLibrary(DLLHandle);
+        DLLHandle = nullptr;
+        return false;
+    }
+
+    // Init CommRecord defaults
+    CommRecord.BaudRate = 9600;
+    CommRecord.CommPortNumber = 1;
+    CommRecord.hComm = nullptr;
+    CommRecord.AxisDoneFlags = 0;
+    CommRecord.GlobalDone = false;
+    CommRecord.Overtravel = false;
+    CommRecord.CmdError = false;
+    CommRecord.Slip = false;
+    CommRecord.Mode = 0;
+    CommRecord.TimeLimit = 0;
+    CommRecord.LF_Count = 0;
+    CommRecord.Timer = 0;
+    return true;
+}
+
+void UnloadDLL() {
+    if (DLLHandle) {
+        FreeLibrary(DLLHandle);
+        DLLHandle = nullptr;
+        pInitOmsCommPort = nullptr;
+        pSendString = nullptr;
+    }
+}
+
+// ------------------------- DLL Wrappers -------------------------
+bool InitComm() {
+    if (!pInitOmsCommPort) return false;
+    long result = pInitOmsCommPort(&CommRecord);
+    return result == SUCCESS;
+}
+
+bool SendCommand(const std::string& cmd) {
+    if (!pSendString) return false;
+    char buffer[256];
+    strncpy_s(buffer, cmd.c_str(), sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = 0;
+
+    long result = pSendString(&CommRecord, buffer);
+    if (result != SUCCESS) {
+        std::cerr << "SendString failed with code " << result << std::endl;
+        return false;
+    }
+    return true;
+}
+
+// ------------------------- Telescope Functions -------------------------
+void loadparams() {
+    tdecfact = ((360.0 / 338) * 3600) / 50000;
+    tdecfact = 1 / tdecfact * 3600;
 
     TrkRate = 500.6;
-    xvlslew = 75000;
-    yvlslew = 50000;
-    xvl5inch = 2000;
-    yvl5inch = 2000;
-    xvl = 10000;
-    xac = 35000;
-    yvl = 5000;
-    yac = 25000;
-
-    yacmax = "25000"; //not sure why these are strings lowkey
+    xvlslew = "75000";
+    yvlslew = "50000";
+    xvl5inch = "2000";
+    yvl5inch = "2000";
+    xvl = "10000";
+    xac = "35000";
+    yvl = "5000";
+    yac = "25000";
+    yacmax = "25000";
     yvlmax = "100000";
     xacmax = "35000";
     xvlmax = "75000";
 }
 
-//skipping gui procedures
-//rewriting jog commands to be called from console:
-
-void jogNorthCommand() {
-    if (!LastDecNorth) {
-        // BumpNorth(); //TODO: Implementation 
+// ------------------------- Jog Commands -------------------------
+void JogNorthCommand() {
+    std::string CmdStr;
+    if (SlewSelect) {
+        CmdStr = (yPole >= 0 ? "AY JG+" : "AY JG-") + yvl + ";";
+    } else {
+        int i = static_cast<int>(std::round(TrkRate / 4));
+        CmdStr = (yPole >= 0 ? "AY JG" : "AY JG-") + std::to_string(i) + ";";
     }
+    SendCommand(CmdStr);
+}
+
+void StopNorthCommand() { SendCommand("AY ST;"); }
+
+void JogSouthCommand() {
+    std::string CmdStr;
+    if (SlewSelect) {
+        CmdStr = (yPole >= 0 ? "AY JG-" : "AY JG+") + yvl + ";";
+    } else {
+        int i = static_cast<int>(std::round(TrkRate / 4));
+        CmdStr = (yPole >= 0 ? "AY JG-" : "AY JG") + std::to_string(i) + ";";
+    }
+    SendCommand(CmdStr);
+}
+
+void StopSouthCommand() { SendCommand("AY ST;"); }
+
+void JogEastCommand() {
+    std::string CmdStr;
+    if (SlewSelect) {
+        CmdStr = "AX JG0; AX JG-" + xvl + ";";
+    } else {
+        int i = static_cast<int>(std::round(TrkRate / 2));
+        CmdStr = "AX JG" + std::to_string(i) + ";";
+    }
+    SendCommand(CmdStr);
+}
+
+void StopEastCommand() { SendCommand("AX ST;"); }
+
+void JogWestCommand() {
+    std::string CmdStr;
+    if (SlewSelect) {
+        CmdStr = "AX JG0; JG" + xvl + ";";
+    } else {
+        int i = static_cast<int>(std::round(TrkRate + (TrkRate / 2)));
+        CmdStr = "AX JG" + std::to_string(i) + ";";
+    }
+    SendCommand(CmdStr);
+}
+
+void StopWestCommand() { SendCommand("AX ST;"); }
+
+void StopAll() {
+    SendCommand("AA ST;");
+}
+
+void Park() {
+    Parkit = true;
+}
+
+void ManualControlMenu() {
+    while (true) {
+        std::cout << "\n=== Telescope Manual Control Menu ===\n";
+        std::cout << "1. Jog North\n";
+        std::cout << "2. Jog South\n";
+        std::cout << "3. Jog East\n";
+        std::cout << "4. Jog West\n";
+        std::cout << "5. Stop All Axes\n";
+        std::cout << "6. Park Telescope\n";
+        std::cout << "0. Exit Manual Control\n";
+        std::cout << "Enter your choice: ";
+
+        int choice;
+        std::cin >> choice;
+
+        switch (choice) {
+            case 1:
+                std::cout << "Jogging North..." << std::endl;
+                JogNorthCommand();
+                break;
+            case 2:
+                std::cout << "Jogging South..." << std::endl;
+                JogSouthCommand();
+                break;
+            case 3:
+                std::cout << "Jogging East..." << std::endl;
+                JogEastCommand();
+                break;
+            case 4:
+                std::cout << "Jogging West..." << std::endl;
+                JogWestCommand();
+                break;
+            case 5:
+                std::cout << "Stopping all axes..." << std::endl;
+                StopAll();
+                break;
+            case 6:
+                std::cout << "Parking telescope..." << std::endl;
+                Park();
+                break;
+            case 0:
+                std::cout << "Exiting manual control..." << std::endl;
+                return;
+            default:
+                std::cout << "Invalid choice, try again." << std::endl;
+        }
+    }
+}
+
+int main() {
+    if (!LoadDLL()) return 1;
+    if (!InitComm()) {
+        std::cerr << "Failed to initialize telescope." << std::endl;
+        return 1;
+    }
+
+    loadparams();
+
+    ManualControlMenu();  // Enter user control menu
+
+    UnloadDLL();
+    return 0;
 }
