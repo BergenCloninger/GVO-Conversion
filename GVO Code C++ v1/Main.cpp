@@ -5,16 +5,8 @@
 #include <functional>
 #include "OMS68SERMC.h"
 #include <windows.h>
-
-// ------------------------- Structs & Types -------------------------
-struct Coord {
-    double RA;
-    double Dec;
-    double RAGoto;
-    double DecGoto;
-    double RASync;
-    double DecSync;
-};
+#include "CommUtils.h"
+#include "TimerUnit.h"
 
 using TeleAPICallBack = std::function<void(int)>;
 
@@ -28,7 +20,6 @@ enum class StateVar {
     Slewing
 };
 
-// ------------------------- Telescope Globals -------------------------
 double TrkRate;
 std::string xvlslew, yvlslew, xvl5inch, yvl5inch;
 std::string xvl, xac, xacmax, xvlmax, yvl, yac, yacmax, yvlmax;
@@ -45,7 +36,6 @@ bool TargetEastOfMeridian = true;
 
 uint8_t keystroke, pcxdataout, status;
 std::string name, commandBuffer;
-void* pndomem;
 uint8_t halfSecondCounter;
 int quadrant, targetQuadrant;
 bool movingRA, movingDEC;
@@ -59,16 +49,8 @@ double RaTarget, DecTarget, Meridian, EastHor, WestHor;
 double EastHA, WestHA, NorthHA, SouthHA, A, H;
 double RaPos, decPos, tdecfact;
 bool Parkit, NorthofZenith, NoPassword;
-
+char Response[256];
 // ------------------------- DLL Function Pointers -------------------------
-typedef long(__stdcall* InitOmsCommPort_t)(SCOMM_STRUCT*);
-typedef long(__stdcall* SendString_t)(SCOMM_STRUCT*, char*);
-
-SCOMM_STRUCT CommRecord = {};
-static HMODULE DLLHandle = nullptr;
-static InitOmsCommPort_t pInitOmsCommPort = nullptr;
-static SendString_t pSendString = nullptr;
-
 void PrintLastError() {
     DWORD err = GetLastError();
     LPVOID msgBuf;
@@ -81,72 +63,6 @@ void PrintLastError() {
         0, nullptr);
     std::cerr << "LoadLibrary failed: " << (char*)msgBuf << std::endl;
     LocalFree(msgBuf);
-}
-
-bool LoadDLL() {
-    HMODULE hDLL = LoadLibraryA("68SERMC.DLL");
-    if (!hDLL) {
-        DWORD err = GetLastError();
-        std::cerr << "LoadLibrary failed, error code: " << err << std::endl;
-    }
-    DLLHandle = LoadLibraryA("E:\\VSCode Projects\\Observatory Code Conversion\\GVO-Conversion\\GVO Code C++ v1\\68SERMC.DLL");
-    if (!DLLHandle) {
-        std::cerr << "Error: 68SERMC.DLL could not be loaded!" << std::endl;
-        return false;
-    }
-    pInitOmsCommPort = reinterpret_cast<InitOmsCommPort_t>(GetProcAddress(DLLHandle, "InitOmsCommPort"));
-    pSendString = reinterpret_cast<SendString_t>(GetProcAddress(DLLHandle, "SendString"));
-    if (!pInitOmsCommPort || !pSendString) {
-        std::cerr << "Error: Could not get function addresses!" << std::endl;
-        FreeLibrary(DLLHandle);
-        DLLHandle = nullptr;
-        return false;
-    }
-
-    // Init CommRecord defaults
-    CommRecord.BaudRate = 9600;
-    CommRecord.CommPortNumber = 1;
-    CommRecord.hComm = nullptr;
-    CommRecord.AxisDoneFlags = 0;
-    CommRecord.GlobalDone = false;
-    CommRecord.Overtravel = false;
-    CommRecord.CmdError = false;
-    CommRecord.Slip = false;
-    CommRecord.Mode = 0;
-    CommRecord.TimeLimit = 0;
-    CommRecord.LF_Count = 0;
-    CommRecord.Timer = 0;
-    return true;
-}
-
-void UnloadDLL() {
-    if (DLLHandle) {
-        FreeLibrary(DLLHandle);
-        DLLHandle = nullptr;
-        pInitOmsCommPort = nullptr;
-        pSendString = nullptr;
-    }
-}
-
-// ------------------------- DLL Wrappers -------------------------
-bool InitComm() {
-    if (!pInitOmsCommPort) return false;
-    long result = pInitOmsCommPort(&CommRecord);
-    return result == SUCCESS;
-}
-
-bool SendCommand(const std::string& cmd) {
-    if (!pSendString) return false;
-    char buffer[256];
-    strncpy_s(buffer, cmd.c_str(), sizeof(buffer) - 1);
-    buffer[sizeof(buffer) - 1] = 0;
-
-    long result = pSendString(&CommRecord, buffer);
-    if (result != SUCCESS) {
-        std::cerr << "SendString failed with code " << result << std::endl;
-        return false;
-    }
-    return true;
 }
 
 // ------------------------- Telescope Functions -------------------------
@@ -239,6 +155,7 @@ void ManualControlMenu() {
         std::cout << "4. Jog West\n";
         std::cout << "5. Stop All Axes\n";
         std::cout << "6. Park Telescope\n";
+        std::cout << "7. Connect to TheSky\n";
         std::cout << "0. Exit Manual Control\n";
         std::cout << "Enter your choice: ";
 
@@ -270,6 +187,10 @@ void ManualControlMenu() {
                 std::cout << "Parking telescope..." << std::endl;
                 Park();
                 break;
+            case 7:
+                std::cout << "Connecting telescope..." << std::endl;
+                TimerUpdate();
+                break;
             case 0:
                 std::cout << "Exiting manual control..." << std::endl;
                 return;
@@ -280,16 +201,22 @@ void ManualControlMenu() {
 }
 
 int main() {
-    if (!LoadDLL()) return 1;
-    if (!InitComm()) {
-        std::cerr << "Failed to initialize telescope." << std::endl;
+    if (!CommUtils::InitSharedMem("E:\\VSCode Projects\\Observatory Code Conversion\\GVO-Conversion\\GVO Code C++ v1\\teleapi.dll")) {
+        std::cerr << "Failed to initialize shared memory.\n";
         return 1;
     }
 
+    if (!LoadDLL()) return 1;
+
+    if (!InitComm()) {
+        std::cerr << "Failed to initialize telescope." << std::endl;
+        return 1;
+    } else {
+        std::cout << "Connected to device on port " << CommRecord.CommPortNumber << "\n";
+    }
+
     loadparams();
-
-    ManualControlMenu();  // Enter user control menu
-
+    ManualControlMenu();
     UnloadDLL();
     return 0;
 }

@@ -104,6 +104,23 @@ struct SCOMM_STRUCT {
     int Timer;
 };
 
+struct SCOMM_STRUCT;
+
+typedef long(__stdcall* InitOmsCommPort_t)(SCOMM_STRUCT*);
+typedef long(__stdcall* SendString_t)(SCOMM_STRUCT*, char*);
+typedef long(__stdcall* SendAndGetString_t)(SCOMM_STRUCT*, char*, char*);
+
+extern InitOmsCommPort_t pInitOmsCommPort;
+extern SendString_t pSendString;
+extern SendAndGetString_t pSendAndGetString;
+
+extern SCOMM_STRUCT CommRecord;
+extern HMODULE DLLHandle;
+
+//load/unload dll functions included
+bool LoadDLL();
+void UnloadDLL();
+
 // ---------------------------------------------------------------------------
 // DLL function declarations
 extern "C" {
