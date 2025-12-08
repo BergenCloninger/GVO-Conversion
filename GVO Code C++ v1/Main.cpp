@@ -201,6 +201,7 @@ void ManualControlMenu() {
 }
 
 int main() {
+    //DLL init
     if (!CommUtils::InitSharedMem("E:\\VSCode Projects\\Observatory Code Conversion\\GVO-Conversion\\GVO Code C++ v1\\teleapi.dll")) {
         std::cerr << "Failed to initialize shared memory.\n";
         return 1;
