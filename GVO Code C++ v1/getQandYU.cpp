@@ -22,7 +22,6 @@ void GetQandY(double ra, double dec, double& Alt, double& HA, double& Xcount, do
     WestHA = 6;
     SouthHA = 0;
 
-    // Hour angle in hours
     HA = Meridian - ra;
 
     // Altitude (degrees)
@@ -58,6 +57,5 @@ void GetQandY(double ra, double dec, double& Alt, double& HA, double& Xcount, do
         Ycount = -1.0 * (C_Lat - dec) * DECFACT;
     }
 
-    // RA counts: east of meridian negative, west positive
     Xcount = HA * 15.0 * RAFact;
 }

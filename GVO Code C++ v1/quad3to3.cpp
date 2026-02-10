@@ -11,7 +11,6 @@ void GoQuad3to3(double Xcount, double Ycount) {
     movingRA = true;
     movingDEC = true;
 
-    // RA
     RaPos = std::abs(Xcount);
     std::ostringstream ossRA;
     ossRA << std::fixed << std::setprecision(0) << RaPos;
@@ -21,14 +20,11 @@ void GoQuad3to3(double Xcount, double Ycount) {
     ossTrk << std::fixed << TrkRate;
     std::string CmdStr2 = ossTrk.str();
 
-    // Send RA STOP
     SendCommand("AX ST;");
 
-    // Send RA SLEW
     CmdStr = "AX VL" + xvlslew + " MA-" + CmdStr + " GD ID;";
     SendCommand(CmdStr);
 
-    // DEC
     decPos = Ycount;
     std::ostringstream ossDec;
     ossDec << std::fixed << std::setprecision(0) << decPos;

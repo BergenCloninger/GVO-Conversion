@@ -26,14 +26,11 @@ void GoQuad1to2() {
     oss2 << std::fixed << TrkRate;
     std::string CmdStr2 = oss2.str();
 
-    // Send RA STOP
     SendCommand("AX ST;");
 
-    // Send RA SLEW
     CmdStr = "AX VL" + xvlslew + " MA" + CmdStr + " GD ID;";
     SendCommand(CmdStr);
 
-    // DEC calculation
     if (DecTarget < 0.0)
         decPos = 90.0 + std::abs(DecTarget);
     else
@@ -41,12 +38,10 @@ void GoQuad1to2() {
 
     decPos = decPos * DECFACT;
 
-    // Convert DEC to string
     std::ostringstream ossDec;
     ossDec << std::fixed << std::setprecision(0) << decPos;
     CmdStr = ossDec.str();
 
-    // Send DEC SLEW
-    CmdStr = "AY VL" + yvlslew + " MA" + CmdStr + " GD ID;";
+    CmdStr = "AY VL" + yvlslew + " MA" + CmdStr + " GD ID;"; //1:1 command string needs testing
     SendCommand(CmdStr);
 }

@@ -11,11 +11,8 @@
 #include <iostream>
 
 void SlewScope() {
-    Coord* coord = CommUtils::GetCoordPtr();
+    Coord* coord = CommUtils::GetCoordPtr(); //pull from TheSKy
     HWND thandle = 0;
-
-    // Disable jog buttons if needed (optional for GUI)
-    // mainform.sjog.enabled = false; etc.
 
     RaTarget = coord->RAGoto;
     DecTarget = coord->DecGoto;
@@ -47,5 +44,5 @@ void SlewScope() {
 		std::cout << "No slew below pole";
     }
 
-    // Note: Other quadrant transitions (4-to-*) are commented out in Pascal ????
+    // Note: Other quadrant transitions are commented out in Pascal ????
 }

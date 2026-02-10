@@ -35,7 +35,7 @@ void UpdateCoord() {
 
     if (x == 0.0) x = 1.0;
 
-    // RA calculation by quadrant
+    // RA calculation by quadrant (idk why it's like this I should change it)
     if (x > 0.0 && yPole > 0) { // quad 3
         RANow = TempStime - (x / RAFact / 15.0);
         if (RANow < 0) RANow += 24.0;
@@ -53,7 +53,6 @@ void UpdateCoord() {
         if (RANow < 0) RANow += 24.0;
     }
 
-    // calc hr, min, sec
     RAHr = static_cast<int>(RANow);
     RAMin = static_cast<int>((RANow - RAHr) * 60);
     RASec = static_cast<int>((RANow - RAHr) * 3600 - RAMin * 60);
@@ -64,22 +63,20 @@ void UpdateCoord() {
     DECMin = static_cast<int>((DECNow - DECDeg) * 60);
     DECSec = static_cast<int>((DECNow - DECDeg) * 3600 - DECMin * 60);
 
-    // update shared memory
+    // update shared memory (coord struct is global)
     coord->RA = RANow;
     coord->Dec = DECNow;
 
     // get quadrant, counts, and yPole
     GetQandY(RANow, DECNow, Alt, HA, Xcount, Ycount, quadrant, yPole);
 
-    // below horizon safety
     if (Alt < 20.0) {
         SendCommand("AA ST;");
         Coord* c = CommUtils::GetCoordPtr();
         if (c) { c->RAGoto = 0.0; c->DecGoto = 0.0; }
-        std::cerr << "No track below horizon!\n";
+        std::cerr << "No track below horizon!\n"; // below horizon safety
     }
 
-    // Alt/Az
     double azimuth = (-std::sin(degToRad(DECNow))) / std::cos(degToRad(C_Lat));
     if (azimuth < -1.0) azimuth = -1.0;
     if (azimuth > 1.0) azimuth = 1.0;
@@ -94,5 +91,5 @@ void UpdateCoord() {
     azsec = static_cast<int>((azimuth - azdeg) * 3600 - azmin * 60);
 
     // Optional debug
-    std::cout << "RA: " << RANow << " DEC: " << DECNow << " Alt: " << Alt << " Az: " << azimuth << "\n";
+    //std::cout << "RA: " << RANow << " DEC: " << DECNow << " Alt: " << Alt << " Az: " << azimuth << "\n";
 }
