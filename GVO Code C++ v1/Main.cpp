@@ -7,25 +7,24 @@
 #include <windows.h>
 #include "CommUtils.h"
 #include "TimerUnit.h"
+#include "GlobalValues.h"
+#include "StateVar.h"
 
-using TeleAPICallBack = std::function<void(int)>;
+//NEED TO SET CONSTANTS FROM PASCAL MAIN FILE
+double TrkRate = 0.0;
+double RAFact = 0.0, DECFACT = 0.0;
+double C_Lat = 0.0, C_Long = 0.0;
+//double SidTimeFract = 0.0;
+double SidTime = 0.0;
+double RANow = 0.0, DECNow = 0.0;
+double RaTarget = 0.0, DecTarget = 0.0, Meridian = 0.0, EastHor = 0.0, WestHor = 0.0;
+double EastHA = 0.0, WestHA = 0.0, NorthHA = 0.0, SouthHA = 0.0, A = 0.0, H = 0.0;
+double RaPos = 0.0, decPos = 0.0, tdecfact = 0.0;
 
-enum class StateVar {
-    Off,
-    Tracking,
-    CorrectingE,
-    CorrectingW,
-    CorrectingN,
-    CorrectingS,
-    Slewing
-};
-
-double TrkRate;
 std::string xvlslew, yvlslew, xvl5inch, yvl5inch;
 std::string xvl, xac, xacmax, xvlmax, yvl, yac, yacmax, yvlmax;
-double RAFact, DECFACT;
-int DecBack;
-double C_Lat, C_Long;
+
+int DecBack = 0;
 int yPole = 1;
 bool LastDecNorth = true;
 bool SlewSelect = true;
@@ -34,23 +33,41 @@ bool EastOfMeridian = true;
 bool LookingEast = true;
 bool TargetEastOfMeridian = true;
 
-uint8_t keystroke, pcxdataout, status;
+uint8_t keystroke = 0, pcxdataout = 0, status = 0, HalfSecondCounter = 0;
+int quadrant = 1, targetQuadrant = 1;
+bool movingRA = false, movingDEC = false;
+uint8_t io = 0;
+bool EastPushed = false, WestPushed = false, NorthPushed = false, SouthPushed = false, ManualPushed = false;
+
+int RAHr = 0, RAMin = 0, RASec = 0;
+int DECDeg = 0, DECMin = 0, DECSec = 0;
+int altdeg = 0, altmin = 0, altsec = 0, azdeg = 0, azmin = 0, azsec = 0;
+
+bool Parkit = false, NorthofZenith = false, NoPassword = false;
+char Response[256] = {0};
+
+//MATHEMATICAL CONSTANTS SET
+double pi = 3.1415926535897932;
+double pi2 = 2.0 * pi;
+
+double DToR = pi / 180.0;
+double HToR = pi / 12.0;
+double RToD = 180.0 / pi;
+double RToH = 12.0 / pi;
+double SToR = DToR / 3600.0;
+
+double EarthRadius = 6378.14;
+double SolarParallax = 8.794 * SToR;
+
+int FK4System = 1;
+int FK5System = 2;
+
 std::string name, commandBuffer;
-uint8_t halfSecondCounter;
-int quadrant, targetQuadrant;
-bool movingRA, movingDEC;
-uint8_t io;
-bool EastPushed, WestPushed, NorthPushed, SouthPushed, ManualPushed;
-double SidTimeFract, SidTime, RANow, DECNow, azimuth;
-int RAHr, RAMin, RASec;
-int DECDeg, DECMin, DECSec;
-int altdeg, altmin, altsec, azdeg, azmin, azsec;
-double RaTarget, DecTarget, Meridian, EastHor, WestHor;
-double EastHA, WestHA, NorthHA, SouthHA, A, H;
-double RaPos, decPos, tdecfact;
-bool Parkit, NorthofZenith, NoPassword;
-char Response[256];
-// ------------------------- DLL Function Pointers -------------------------
+using TeleAPICallBack = std::function<void(int)>;
+
+StateVar Xstate = StateVar::Off;
+StateVar Ystate = StateVar::Off;
+
 void PrintLastError() {
     DWORD err = GetLastError();
     LPVOID msgBuf;
@@ -65,7 +82,6 @@ void PrintLastError() {
     LocalFree(msgBuf);
 }
 
-// ------------------------- Telescope Functions -------------------------
 void loadparams() {
     tdecfact = ((360.0 / 338) * 3600) / 50000;
     tdecfact = 1 / tdecfact * 3600;
@@ -85,7 +101,6 @@ void loadparams() {
     xvlmax = "75000";
 }
 
-// ------------------------- Jog Commands -------------------------
 void JogNorthCommand() {
     std::string CmdStr;
     if (SlewSelect) {

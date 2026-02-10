@@ -17,9 +17,8 @@ struct Coord {
 };
 
 namespace CommUtils {
+    extern void* pndomem;
     bool InitSharedMem(const std::string& dllPath);
-    Coord* GetCoordPtr();
     void ShutdownSharedMem();
+    Coord* GetCoordPtr();
 }
-
-extern void* pndomem;

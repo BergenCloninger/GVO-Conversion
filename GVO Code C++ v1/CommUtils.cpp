@@ -98,7 +98,7 @@ namespace CommUtils {
 	static HMODULE hDLL = nullptr;
 	using getndomem_t = void* (__stdcall*)();
 	static getndomem_t getndomem = nullptr;
-	static void* pndomem = nullptr;
+	void* pndomem = nullptr;
 
 	bool InitSharedMem(const std::string& dllPath) {
 		hDLL = LoadLibraryA(dllPath.c_str());

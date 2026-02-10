@@ -1,6 +1,4 @@
-#ifndef CALCCOORD_H
-#define CALCCOORD_H
+#pragma once
+#include "CommUtils.h"
 
-
-
-#endif // CALCCOORD_H
+void UpdateCoord();

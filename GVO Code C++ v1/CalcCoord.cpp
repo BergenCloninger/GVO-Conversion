@@ -1,28 +1,98 @@
 #include "CalcCoord.h"
-
-// Interface includes, not sure if windows api calls are required for this now, but im doing 1:1 for now
+#include "GlobalValues.h"
+#include "GetQandYU.h"
+#include "CommUtils.h"
+#include "utils.h"
 #include <cmath>
-#include <windows.h>
+#include <iostream>
 #include <string>
-// #include <dialogs> not sure if there is an analogue for this, ill have to see what each function does as I work.
-// It's possible that I can use std instead of windows.h as well when doing a command line implementation.
+#include <sstream>
 
-// #include "Utils.h" to be implemented, dependent on Utils.pas
-// #include "Main.h"
-// #include "GetQandYU.h"
-// #include "OMS68SERMC.h" //high priority
+// helper
+inline double radToDeg(double rad) { return rad * 180.0 / pi; }
+inline double degToRad(double deg) { return deg * pi / 180.0; }
 
-//Implementation (start of program)
 void UpdateCoord() {
-    std::string CmdStr, TempStr1, TempStr2, TempStr3; //really cool and useful names here
-    double x, y, alt, ha, Xcount, Ycount, TempStime;
-    HWND thandle; 
+    if (!CommUtils::pndomem) {
+        std::cerr << "Shared memory not initialized!\n";
+        return;
+    }
 
-    //start of "begin" from pascal code
-    thandle = 0;
-    // requires main implementation for further work
-}
+    Coord* coord = CommUtils::GetCoordPtr();
+    if (!coord) return;
 
-void doDec() {
+    double x = 0.0, y = 0.0, Alt = 0.0, HA = 0.0, Xcount = 0.0, Ycount = 0.0, TempStime = 0.0;
+    int quad = 0;
 
+    // Simulate getting stepper counts from mount
+    // In Pascal: While SendAndGetString(CommRecord,'PP;',Response)<> 0 Do
+    // We'll assume you have a function for that, here we just use coord->RA/Dec counts
+    x = coord->RA;    // RA counts
+    y = coord->Dec;   // DEC counts
+
+    // get sidereal time
+    TempStime = GetStime();  // implement this to return current sidereal time
+
+    if (x == 0.0) x = 1.0;
+
+    // RA calculation by quadrant
+    if (x > 0.0 && yPole > 0) { // quad 3
+        RANow = TempStime - (x / RAFact / 15.0);
+        if (RANow < 0) RANow += 24.0;
+    }
+    else if (x < 0.0 && yPole < 0) { // quad 2
+        RANow = TempStime + (std::abs(x) / RAFact / 15.0);
+        if (RANow > 24.0) RANow -= 24.0;
+    }
+    else if (x < 0.0 && yPole > 0) { // quad 1
+        RANow = TempStime + (std::abs(x) / RAFact / 15.0);
+        if (RANow > 24.0) RANow -= 24.0;
+    }
+    else if (x > 0.0 && yPole < 0) { // quad 4
+        RANow = TempStime - (x / RAFact / 15.0);
+        if (RANow < 0) RANow += 24.0;
+    }
+
+    // calc hr, min, sec
+    RAHr = static_cast<int>(RANow);
+    RAMin = static_cast<int>((RANow - RAHr) * 60);
+    RASec = static_cast<int>((RANow - RAHr) * 3600 - RAMin * 60);
+
+    // DEC calculation
+    DECNow = C_Lat + (y / DECFACT); // stepper counts positive north, negative south
+    DECDeg = static_cast<int>(DECNow);
+    DECMin = static_cast<int>((DECNow - DECDeg) * 60);
+    DECSec = static_cast<int>((DECNow - DECDeg) * 3600 - DECMin * 60);
+
+    // update shared memory
+    coord->RA = RANow;
+    coord->Dec = DECNow;
+
+    // get quadrant, counts, and yPole
+    GetQandY(RANow, DECNow, Alt, HA, Xcount, Ycount, quadrant, yPole);
+
+    // below horizon safety
+    if (Alt < 20.0) {
+        SendCommand("AA ST;");
+        Coord* c = CommUtils::GetCoordPtr();
+        if (c) { c->RAGoto = 0.0; c->DecGoto = 0.0; }
+        std::cerr << "No track below horizon!\n";
+    }
+
+    // Alt/Az
+    double azimuth = (-std::sin(degToRad(DECNow))) / std::cos(degToRad(C_Lat));
+    if (azimuth < -1.0) azimuth = -1.0;
+    if (azimuth > 1.0) azimuth = 1.0;
+    azimuth = radToDeg(std::acos(azimuth));
+
+    altdeg = static_cast<int>(Alt);
+    altmin = static_cast<int>((Alt - altdeg) * 60);
+    altsec = static_cast<int>((Alt - altdeg) * 3600 - altmin * 60);
+
+    azdeg = static_cast<int>(azimuth);
+    azmin = static_cast<int>((azimuth - azdeg) * 60);
+    azsec = static_cast<int>((azimuth - azdeg) * 3600 - azmin * 60);
+
+    // Optional debug
+    std::cout << "RA: " << RANow << " DEC: " << DECNow << " Alt: " << Alt << " Az: " << azimuth << "\n";
 }
