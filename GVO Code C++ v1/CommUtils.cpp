@@ -4,7 +4,6 @@
 #include "CommUtils.h"
 #include "OMS68SERMC.h"
 
-// ---------------------------------------------------------------------------
 // Initialize SendString function from DLL
 bool InitCommUtils() {
 	if (!DLLHandle) {
@@ -26,7 +25,6 @@ bool InitCommUtils() {
 	return pSendString != nullptr && pSendAndGetString != nullptr;
 }
 
-// ---------------------------------------------------------------------------
 // Initialize the OMS communication port
 bool InitComm() {
 	if (!pInitOmsCommPort) {
@@ -59,8 +57,7 @@ bool InitComm() {
 	return true;
 }
 
-// ---------------------------------------------------------------------------
-// Send a command string
+// Wrapper "send command" function for DLL
 bool SendCommand(const std::string& cmd) {
 	if (!pSendString) return false;
 

@@ -14,7 +14,7 @@ SendAndGetString_t pSendAndGetString = nullptr;
 
 bool LoadDLL() {
     // Load the DLL once
-    DLLHandle = LoadLibraryA("E:\\VSCode Projects\\Observatory Code Conversion\\GVO-Conversion\\GVO Code C++ v1\\68SERMC.DLL");
+    DLLHandle = LoadLibraryA("E:\\VSCode Projects\\Observatory Code Conversion\\GVO-Conversion\\GVO Code C++ v1\\68SERMC.DLL"); //Should load dynamically from local directory
     if (!DLLHandle) {
         DWORD err = GetLastError();
         std::cerr << "LoadLibrary failed, error code: " << err << std::endl;
@@ -25,6 +25,7 @@ bool LoadDLL() {
     pInitOmsCommPort = reinterpret_cast<InitOmsCommPort_t>(
         GetProcAddress(DLLHandle, "InitOmsCommPort")
     );
+    
     pSendString = reinterpret_cast<SendString_t>(
         GetProcAddress(DLLHandle, "SendString")
     );

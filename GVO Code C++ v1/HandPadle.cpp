@@ -11,8 +11,7 @@
 #include <string>
 #include <cmath>
 
-void HandleHandPadle()
-{
+void HandleHandPadle() {
 	std::string CmdStr, TempStr;
 	int i;
 
@@ -44,26 +43,18 @@ void HandleHandPadle()
 	EastPushed  = (ioLocal & EastBit)  != 0;
 	WestPushed  = (ioLocal & WestBit)  != 0;
 
-
-	// ---------- High speed mode ----------
-	if (ManualPushed || SlewSelect)
-	{
+	if (ManualPushed || SlewSelect) {
 		HandleFastPadle();
 		return;
 	}
 
-
-	// ================= X AXIS =================
-	switch (Xstate)
-	{
+	switch (Xstate) {
 	case StateVar::Off:
-		break;
+		break; //no movement if input is 0
 
 
 	case StateVar::Tracking:
-
-		if (EastPushed)
-		{
+		if (EastPushed) {
 			Xstate = StateVar::CorrectingE;
 
 			i = (int)std::round(TrkRate / 2.0);
@@ -72,8 +63,7 @@ void HandleHandPadle()
 			SendCommand(CmdStr);
 		}
 
-		if (WestPushed)
-		{
+		if (WestPushed) {
 			Xstate = StateVar::CorrectingW;
 
 			i = (int)std::round(TrkRate + TrkRate / 2.0);
@@ -85,9 +75,7 @@ void HandleHandPadle()
 
 
 	case StateVar::CorrectingE:
-
-		if (!EastPushed && !WestPushed)
-		{
+		if (!EastPushed && !WestPushed) {
 			Xstate = StateVar::Tracking;
 
 			SendCommand("AX ST;");
@@ -97,8 +85,7 @@ void HandleHandPadle()
 			SendCommand(CmdStr);
 		}
 
-		if (EastPushed && WestPushed)
-		{
+		if (EastPushed && WestPushed) {
 			Xstate = StateVar::Slewing;
 
 			CmdStr = "AX ST; AX JG-" + xvl + ";";
@@ -106,11 +93,8 @@ void HandleHandPadle()
 		}
 		break;
 
-
 	case StateVar::CorrectingW:
-
-		if (!EastPushed && !WestPushed)
-		{
+		if (!EastPushed && !WestPushed) {
 			Xstate = StateVar::Tracking;
 
 			SendCommand("AX ST;");
@@ -120,8 +104,7 @@ void HandleHandPadle()
 			SendCommand(CmdStr);
 		}
 
-		if (EastPushed && WestPushed)
-		{
+		if (EastPushed && WestPushed) {
 			Xstate = StateVar::Slewing;
 
 			CmdStr = "AX JG" + xvl + ";";
@@ -129,11 +112,8 @@ void HandleHandPadle()
 		}
 		break;
 
-
 	case StateVar::Slewing:
-
-		if (!EastPushed && !WestPushed)
-		{
+		if (!EastPushed && !WestPushed) {
 			Xstate = StateVar::Tracking;
 
 			SendCommand("AX ST;");
@@ -143,23 +123,18 @@ void HandleHandPadle()
 		}
 		break;
 
-
 	default:
 		break;
 	}
 
 
-	// ================= Y AXIS =================
-	switch (Ystate)
-	{
+	switch (Ystate) {
 	case StateVar::Off:
 		break;
 
-
 	case StateVar::Tracking:
 
-		if (NorthPushed)
-		{
+		if (NorthPushed) {
 			if ((yPole >= 0 && LastDecNorth))
 				BumpSouth();
 			else if (!LastDecNorth)
@@ -173,9 +148,7 @@ void HandleHandPadle()
 			SendCommand(CmdStr);
 		}
 
-
-		if (SouthPushed)
-		{
+		if (SouthPushed) {
 			if ((yPole >= 0 && !LastDecNorth))
 				BumpNorth();
 			else if (LastDecNorth)
@@ -191,11 +164,8 @@ void HandleHandPadle()
 
 		break;
 
-
 	case StateVar::CorrectingN:
-
-		if (!NorthPushed && !SouthPushed)
-		{
+		if (!NorthPushed && !SouthPushed) {
 			Ystate = StateVar::Tracking;
 
 			SendCommand("AY ST;");
@@ -212,16 +182,13 @@ void HandleHandPadle()
 
 
 	case StateVar::CorrectingS:
-
-		if (!NorthPushed && !SouthPushed)
-		{
+		if (!NorthPushed && !SouthPushed) {
 			Ystate = StateVar::Tracking;
 
 			SendCommand("AY ST;");
 		}
 
-		if (NorthPushed && SouthPushed)
-		{
+		if (NorthPushed && SouthPushed) {
 			Ystate = StateVar::Slewing;
 
 			CmdStr = "AY JG-" + yvl + ";";
@@ -231,15 +198,12 @@ void HandleHandPadle()
 
 
 	case StateVar::Slewing:
-
-		if (!NorthPushed && !SouthPushed)
-		{
+		if (!NorthPushed && !SouthPushed) {
 			Ystate = StateVar::Tracking;
 
 			SendCommand("AY ST;");
 		}
 		break;
-
 
 	default:
 		break;

@@ -11,7 +11,6 @@ void GoQuad2to1() {
     movingRA = true;
     movingDEC = true;
 
-    // RA calculation
     RaPos = RaTarget - EastHor;
     if (RaPos > 0.0) RaPos = 24.0 - RaPos;
     RaPos = std::abs(RaPos);
@@ -25,14 +24,11 @@ void GoQuad2to1() {
     ossTrk << std::fixed << TrkRate;
     std::string CmdStr2 = ossTrk.str();
 
-    // Send RA STOP
     SendCommand("AX ST;");
 
-    // Send RA SLEW
     CmdStr = "AX VL" + xvlslew + " MA" + CmdStr + " GD ID;";
     SendCommand(CmdStr);
 
-    // DEC calculation
     decPos = 90.0 - DecTarget;
     if (DecTarget < 0.0) decPos = 90.0 + std::abs(DecTarget);
     decPos = decPos * DECFACT;
@@ -41,7 +37,6 @@ void GoQuad2to1() {
     ossDec << std::fixed << std::setprecision(0) << decPos;
     CmdStr = ossDec.str();
 
-    // Send DEC SLEW
     CmdStr = "AY VL" + yvlslew + " MA" + CmdStr + " GD ID;";
     SendCommand(CmdStr);
 }
