@@ -120,6 +120,10 @@ namespace CommUtils {
 	}
 
 	Coord* GetCoordPtr() {
+		if (!pndomem) {
+			std::cerr << "Shared memory not initialized (pndomem is null)\n";
+			return nullptr;
+		}
 		return reinterpret_cast<Coord*>(pndomem);
 	}
 

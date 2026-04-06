@@ -3,8 +3,10 @@
 #include <cmath>
 #include <cstdint>
 #include <functional>
-#include "OMS68SERMC.h"
 #include <windows.h>
+#include <thread>
+#include <chrono>
+#include "OMS68SERMC.h"
 #include "CommUtils.h"
 #include "TimerUnit.h"
 #include "GlobalValues.h"
@@ -203,9 +205,11 @@ void ManualControlMenu() {
                 Park();
                 break;
             case 7:
-                std::cout << "Connecting telescope..." << std::endl;
-                TimerUpdate();
-                break;
+                while (true) {
+                    TimerUpdate();
+
+		            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                }
             case 0:
                 std::cout << "Exiting manual control..." << std::endl;
                 return;

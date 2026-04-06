@@ -1,5 +1,4 @@
 #include "TimerUnit.h"
-
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -16,6 +15,13 @@ extern char Response[256];
 Coord* CoordMem = CommUtils::GetCoordPtr(); //from shared memory
 
 void TimerUpdate() {
+	std::cout << "TimerUpdate: start" << std::endl;
+
+	if (!CoordMem) {
+		std::cout << "CoordMem is null, is TheSky running?\n";
+		return;
+	}
+
 	std::string CmdStr;
 	std::string CmdStr2;
 	std::string TempStr;
@@ -48,6 +54,7 @@ void TimerUpdate() {
 			}
 		}
 	}
+	std::cout << "TimerUpdate: step 1" << std::endl;
 
 	if (movingDEC) {
 		SendAndGetCommand(&CommRecord, "AY QA;", Response, sizeof(Response));
@@ -66,6 +73,7 @@ void TimerUpdate() {
 			}
 		}
 	}
+	std::cout << "TimerUpdate: step 2" << std::endl;
 
 
 	HalfSecondCounter++;
@@ -76,19 +84,21 @@ void TimerUpdate() {
 	if (HalfSecondCounter == 4) {
 		UpdateCoord();
 	}
+	std::cout << "TimerUpdate: step 3" << std::endl;
 
 	if (movingRA || movingDEC)
 		return;
 	if (CoordMem->RASync != 0.0 && CoordMem->DecSync != 0.0) {
 		SyncScope();
 	}
+	std::cout << "TimerUpdate: step 4" << std::endl;
 
 
 	if (CoordMem->RAGoto != 0.0 && CoordMem->DecGoto != 0.0) {
 		SlewScope();
 		return;
 	}
-
+	std::cout << "TimerUpdate: step 5" << std::endl;
 
 
 	if (Parkit) {
@@ -106,6 +116,7 @@ void TimerUpdate() {
 
 		return;
 	}
+	std::cout << "TimerUpdate: step 6" << std::endl;
 
 	HandleHandPadle();
 }
