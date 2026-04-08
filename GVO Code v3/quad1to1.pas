@@ -20,7 +20,7 @@ Begin {1 to 1}
 	CmdStr := TrimLeft(CmdStr);
 	Str(TrkRate,CmdStr2);
 	CmdStr1 := 'AX ST;';              { Send RA STOP}
-	SendString(CommRecord,pchar(CmdStr));
+	SendString(CommRecord,pchar(CmdStr)); // ??? 
 //       
 	CmdStr := 'AX  VL'+xvlslew+' MA-'+ CmdStr + ' GD ID; ';      {Send RA SLEW}
 	SendString(CommRecord,pchar(CmdStr));

@@ -12,25 +12,21 @@
 #include "GlobalValues.h"
 
 extern char Response[256];
-Coord* CoordMem = CommUtils::GetCoordPtr(); //from shared memory
 
 void TimerUpdate() {
-	std::cout << "TimerUpdate: start" << std::endl;
+	Coord* CoordMem = CommUtils::GetCoordPtr();
+	std::cout << "CoordMem = " << CoordMem << std::endl;
 
 	if (!CoordMem) {
-		std::cout << "CoordMem is null, is TheSky running?\n";
+		std::cout << "CoordMem is null" << std::endl;
 		return;
 	}
+
+	PrintCoordState(CoordMem);
 
 	std::string CmdStr;
 	std::string CmdStr2;
 	std::string TempStr;
-
-	// if (NoPassword) {
-	// 	CmdStr = "AA ST;";
-	// 	SendCommand(CmdStr);
-	// 	return;
-	// }
 
 	if (movingRA) {
 		SendAndGetCommand(&CommRecord, "AX QA;", Response, sizeof(Response));
@@ -54,17 +50,14 @@ void TimerUpdate() {
 			}
 		}
 	}
-	std::cout << "TimerUpdate: step 1" << std::endl;
 
 	if (movingDEC) {
 		SendAndGetCommand(&CommRecord, "AY QA;", Response, sizeof(Response));
 
 		TempStr = Response;
 
-		if (TempStr.length() == 4)
-		{
-			if (std::toupper(TempStr[1]) == 'D')
-			{
+	if (TempStr.length() == 4){
+			if (std::toupper(TempStr[1]) == 'D') {
 				movingDEC = false;
 
 				std::cout << "DEC Axis Move Complete\n";
@@ -73,7 +66,6 @@ void TimerUpdate() {
 			}
 		}
 	}
-	std::cout << "TimerUpdate: step 2" << std::endl;
 
 
 	HalfSecondCounter++;
@@ -84,22 +76,17 @@ void TimerUpdate() {
 	if (HalfSecondCounter == 4) {
 		UpdateCoord();
 	}
-	std::cout << "TimerUpdate: step 3" << std::endl;
 
 	if (movingRA || movingDEC)
 		return;
 	if (CoordMem->RASync != 0.0 && CoordMem->DecSync != 0.0) {
 		SyncScope();
 	}
-	std::cout << "TimerUpdate: step 4" << std::endl;
-
 
 	if (CoordMem->RAGoto != 0.0 && CoordMem->DecGoto != 0.0) {
 		SlewScope();
 		return;
 	}
-	std::cout << "TimerUpdate: step 5" << std::endl;
-
 
 	if (Parkit) {
 		Parkit = false;
@@ -116,9 +103,34 @@ void TimerUpdate() {
 
 		return;
 	}
-	std::cout << "TimerUpdate: step 6" << std::endl;
 
 	HandleHandPadle();
+}
+
+void PrintCoordState(Coord* c) {
+	static Coord last = {};
+	static bool first = true;
+
+	if (first ||
+		c->RA != last.RA ||
+		c->Dec != last.Dec ||
+		c->RAGoto != last.RAGoto ||
+		c->DecGoto != last.DecGoto ||
+		c->RASync != last.RASync ||
+		c->DecSync != last.DecSync) {
+
+		std::cout
+			<< "RA=" << c->RA
+			<< " Dec=" << c->Dec
+			<< " RAGoto=" << c->RAGoto
+			<< " DecGoto=" << c->DecGoto
+			<< " RASync=" << c->RASync
+			<< " DecSync=" << c->DecSync
+			<< std::endl;
+
+		last = *c;
+		first = false;
+	}
 }
 
 void AddTicks() {

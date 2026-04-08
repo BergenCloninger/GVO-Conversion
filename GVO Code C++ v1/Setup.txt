@@ -1,0 +1,16 @@
+The setup folder should contain: 
+- Compiled Main.exe.
+- teleapi.dll
+- 68SERMC.DLL
+- config.ini
+
+Check For Devices: 
+- Win + X -> Device Manager
+- Expand Ports
+- Check for some device (serial device, etc...)
+- Set .ini to use that device port
+
+Static compile command: "C:\Program Files\GCC\winlibs-i686-posix-dwarf-gcc-15.2.0-mingw-w64ucrt-13.0.0-r4\mingw32\bin\g++.exe" -m32 -Wall -static -static-libgcc -static-libstdc++ Main.cpp OMS68SERMC.cpp CommUtils.cpp Utils.cpp Sync.cpp Slew.cpp quad1to1.cpp quad1to2.cpp quad1to3.cpp quad2to1.cpp quad2to2.cpp quad3to1.cpp quad3to3.cpp GetQandYU.cpp CalcCoord.cpp TimerUnit.cpp HandPadle.cpp ManualPadle.cpp Config.cpp -o GVO_Telescope_Control_Strict.exe
+Less aggressive compile command: "C:\Program Files\GCC\winlibs-i686-posix-dwarf-gcc-15.2.0-mingw-w64ucrt-13.0.0-r4\mingw32\bin\g++.exe" -m32 -Wall -static-libgcc -static-libstdc++ Main.cpp OMS68SERMC.cpp CommUtils.cpp Utils.cpp Sync.cpp Slew.cpp quad1to1.cpp quad1to2.cpp quad1to3.cpp quad2to1.cpp quad2to2.cpp quad3to1.cpp quad3to3.cpp GetQandYU.cpp CalcCoord.cpp TimerUnit.cpp HandPadle.cpp ManualPadle.cpp Config.cpp -o GVO_Telescope_Control.exe
+
+NOTE: Telescope control code was written and developed with minGW in C++, and is not compatible on versions of widows that don't support 32-bit and is not configured for other operating systems such as MacOS or Linux. 

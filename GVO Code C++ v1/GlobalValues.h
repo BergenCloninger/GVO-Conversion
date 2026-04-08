@@ -4,6 +4,10 @@
 #include "CommUtils.h"
 #include "StateVar.h"
 
+extern int ComPortNumber;
+extern std::string OmsDllPath;
+extern std::string TeleApiDllPath;
+
 extern StateVar Xstate;
 extern StateVar Ystate;
 

@@ -59,6 +59,7 @@ bool InitComm() {
 
 // Wrapper "send command" function for DLL
 bool SendCommand(const std::string& cmd) {
+	std::cout << "SEND: [" << cmd << "]\n";
 	if (!pSendString) return false;
 
 	char buffer[256];
@@ -75,6 +76,8 @@ bool SendCommand(const std::string& cmd) {
 
 // Send a command and get a response string
 bool SendAndGetCommand(SCOMM_STRUCT* comm, const char* cmd, char* response, size_t respSize) {
+	std::cout << "SEND: [" << cmd << "]\n";
+
 	if (!pSendAndGetString) return false;
 	if (!comm || !cmd || !response || respSize == 0) return false;
 
@@ -90,13 +93,21 @@ bool SendAndGetCommand(SCOMM_STRUCT* comm, const char* cmd, char* response, size
 	return true;
 }
 
+void __stdcall DLLWork(int value) {
+	std::cout << "[Callback] value = " << value << std::endl;
+}
+
 // Shared memory helpers
 namespace CommUtils {
 	static HMODULE hDLL = nullptr;
 	using getndomem_t = void* (__stdcall*)();
-	static getndomem_t getndomem = nullptr;
-	void* pndomem = nullptr;
+	using setcallback_t = void (__stdcall*)(void (__stdcall*)(int));
 
+	static getndomem_t getndomem = nullptr;
+	static setcallback_t setcallback = nullptr;
+
+	void* pndomem = nullptr;
+	
 	bool InitSharedMem(const std::string& dllPath) {
 		hDLL = LoadLibraryA(dllPath.c_str());
 		if (!hDLL) {
@@ -104,23 +115,41 @@ namespace CommUtils {
 			return false;
 		}
 
-		getndomem = reinterpret_cast<getndomem_t>(GetProcAddress(hDLL, MAKEINTRESOURCEA(40)));
-		if (!getndomem) {
-			std::cerr << "Failed to find getndomem in DLL\n";
-			FreeLibrary(hDLL);
-			hDLL = nullptr;
+		// ---- Load setcallback (ordinal 41) ----
+		FARPROC cbProc = GetProcAddress(hDLL, MAKEINTRESOURCEA(41));
+		if (!cbProc) {
+			std::cerr << "Failed to load setcallback (ordinal 41)\n";
+		} else {
+			setcallback = reinterpret_cast<setcallback_t>(cbProc);
+			setcallback(DLLWork);
+			std::cout << "setcallback registered\n";
+		}
+
+		// ---- Load getndomem (ordinal 40) ----
+		FARPROC memProc = GetProcAddress(hDLL, MAKEINTRESOURCEA(40));
+		if (!memProc) {
+			std::cerr << "Failed to find ordinal 40\n";
 			return false;
 		}
 
+		getndomem = reinterpret_cast<getndomem_t>(memProc);
+
 		pndomem = getndomem();
+
 		return pndomem != nullptr;
 	}
 
 	Coord* GetCoordPtr() {
+		if (getndomem) {
+			pndomem = getndomem();
+			// std::cout << "getndomem() returned " << pndomem << std::endl; //Remove after testing.
+		}
+
 		if (!pndomem) {
 			std::cerr << "Shared memory not initialized (pndomem is null)\n";
 			return nullptr;
 		}
+
 		return reinterpret_cast<Coord*>(pndomem);
 	}
 

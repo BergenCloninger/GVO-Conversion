@@ -11,38 +11,66 @@
 #include <iostream>
 
 void SlewScope() {
-    Coord* coord = CommUtils::GetCoordPtr(); //pull from TheSKy
-    HWND thandle = 0;
+	Coord* coord = CommUtils::GetCoordPtr();
+	if (!coord) {
+		std::cout << "SlewScope: Coord is null\n";
+		return;
+	}
 
-    RaTarget = coord->RAGoto;
-    DecTarget = coord->DecGoto;
+	RaTarget = coord->RAGoto;
+	DecTarget = coord->DecGoto;
 
-    double Alt, HA, Xcount, Ycount;
-    int i;
+	double Alt, HA, Xcount, Ycount;
+	int i;
 
-    GetQandY(RaTarget, DecTarget, Alt, HA, Xcount, Ycount, targetQuadrant, i);
+	GetQandY(RaTarget, DecTarget, Alt, HA, Xcount, Ycount, targetQuadrant, i);
 
-    if (Alt < 20.0 || i == 0) {
-        coord->RAGoto = 0.0;
-        coord->DecGoto = 0.0;
-		std::cout << "No slew below horizon";
-        return;
-    }
+	if (Alt < 30.0 || i == 0) {
+		coord->RAGoto = 0.0;
+		coord->DecGoto = 0.0;
+		std::cout << "No slew: target below 30 degrees altitude or invalid\n";
+		return;
+	}
 
-    // Slew based on target and current quadrant
-    if (targetQuadrant == 1 && quadrant == 1)
-        GoQuad1to1(Xcount, Ycount);
-    else if (targetQuadrant == 3 && quadrant == 1)
-        GoQuad1to3(Xcount, Ycount);
-    else if (targetQuadrant == 3 && quadrant == 3)
-        GoQuad3to3(Xcount, Ycount);
-    else if (targetQuadrant == 1 && quadrant == 3)
-        GoQuad3to1(Xcount, Ycount);
-    else {
-        coord->RAGoto = 0.0;
-        coord->DecGoto = 0.0;
-		std::cout << "No slew below pole";
-    }
+	bool slew_started = false;
 
-    // Note: Other quadrant transitions are commented out in Pascal ????
+	if (targetQuadrant == 1 && quadrant == 1) {
+		GoQuad1to1(Xcount, Ycount);
+		slew_started = true;
+	}
+	else if (targetQuadrant == 3 && quadrant == 1) {
+		GoQuad1to3(Xcount, Ycount);
+		slew_started = true;
+	}
+	else if (targetQuadrant == 3 && quadrant == 3) {
+		GoQuad3to3(Xcount, Ycount);
+		slew_started = true;
+	}
+	else if (targetQuadrant == 1 && quadrant == 3) {
+		GoQuad3to1(Xcount, Ycount);
+		slew_started = true;
+	}
+	else {
+		coord->RAGoto = 0.0;
+		coord->DecGoto = 0.0;
+		std::cout << "No slew: unsupported quadrant transition "
+		          << quadrant << " -> " << targetQuadrant << "\n";
+		return;
+	}
+
+	if (slew_started) {
+		movingRA = true;
+		movingDEC = true;
+
+		// Optional: consume the request now so TimerUpdate doesn't retrigger it
+		// coord->RAGoto = 0.0;
+		// coord->DecGoto = 0.0;
+
+		std::cout << "Slew started: quadrant " << quadrant
+		          << " -> " << targetQuadrant
+		          << " Xcount=" << Xcount
+		          << " Ycount=" << Ycount
+		          << " Alt=" << Alt
+		          << " HA=" << HA << "\n";
+	}
 }

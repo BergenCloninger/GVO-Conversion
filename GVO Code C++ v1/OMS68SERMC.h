@@ -1,5 +1,6 @@
 #pragma once
 #include <windows.h>
+#include <string>
 
 // Error codes
 constexpr long SUCCESS = 0;
@@ -118,7 +119,7 @@ extern SCOMM_STRUCT CommRecord;
 extern HMODULE DLLHandle;
 
 //load/unload dll functions included
-bool LoadDLL();
+bool LoadDLL(const std::string& dllPath);
 void UnloadDLL();
 
 // ---------------------------------------------------------------------------

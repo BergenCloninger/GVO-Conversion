@@ -1,5 +1,5 @@
 #pragma once
-#include <string>	
+#include <string>
 #include "OMS68SERMC.h"
 
 bool InitCommUtils();
@@ -8,17 +8,18 @@ bool SendAndGetCommand(SCOMM_STRUCT* comm, const char* cmd, char* response, size
 bool InitComm();
 
 struct Coord {
-    double RA;
-    double Dec;
-    double RASync;
-    double DecSync;
-    double RAGoto;
-    double DecGoto;
+	double RA;
+	double Dec;
+	double RAGoto;
+	double DecGoto;
+	double RASync;
+	double DecSync;
 };
 
 namespace CommUtils {
-    extern void* pndomem;
-    bool InitSharedMem(const std::string& dllPath);
-    void ShutdownSharedMem();
-    Coord* GetCoordPtr();
+	extern void* pndomem;
+
+	bool InitSharedMem(const std::string& dllPath);
+	void ShutdownSharedMem();
+	Coord* GetCoordPtr();
 }

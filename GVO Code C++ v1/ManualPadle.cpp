@@ -7,8 +7,6 @@
 
 // External helpers
 extern std::string FormatDouble(double v, int w, int p);
-extern void BumpNorth();
-extern void BumpSouth();
 
 void BumpNorth() {
 	// Small south pulse first
@@ -113,6 +111,10 @@ void HandleFastPadle() {
 		}
 
 		break;
+
+	case StateVar::CorrectingN:
+	case StateVar::CorrectingS:
+		break;
 	}
 
 	switch (Ystate) {
@@ -184,5 +186,9 @@ void HandleFastPadle() {
 		}
 
 		break;
+
+		case StateVar::CorrectingE:
+		case StateVar::CorrectingW:
+			break;
 	}
 }

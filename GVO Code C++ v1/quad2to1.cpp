@@ -5,38 +5,48 @@
 #include <cmath>
 #include <iomanip>
 #include <sstream>
+#include <iostream>
 
 void GoQuad2to1() {
-    // Set motion flags
-    movingRA = true;
-    movingDEC = true;
+	movingRA = true;
+	movingDEC = true;
 
-    RaPos = RaTarget - EastHor;
-    if (RaPos > 0.0) RaPos = 24.0 - RaPos;
-    RaPos = std::abs(RaPos);
-    RaPos = (RaPos * RAFact) * 15.0;
+	RaPos = RaTarget - EastHor;
+	if (RaPos > 0.0)
+		RaPos = 24.0 - RaPos;
 
-    std::ostringstream ossRA;
-    ossRA << std::fixed << std::setprecision(0) << RaPos;
-    std::string CmdStr = ossRA.str();
+	RaPos = std::abs(RaPos);
+	RaPos = (RaPos * RAFact) * 15.0;
 
-    std::ostringstream ossTrk;
-    ossTrk << std::fixed << TrkRate;
-    std::string CmdStr2 = ossTrk.str();
+	std::ostringstream raStream;
+	raStream << std::fixed << std::setprecision(0) << RaPos;
+	std::string raSteps = raStream.str();
 
-    SendCommand("AX ST;");
+	std::string raCmd = "AX VL" + xvlslew + " MA" + raSteps + " GD ID;";
 
-    CmdStr = "AX VL" + xvlslew + " MA" + CmdStr + " GD ID;";
-    SendCommand(CmdStr);
+	decPos = 90.0 - DecTarget;
+	if (DecTarget < 0.0)
+		decPos = 90.0 + std::abs(DecTarget);
 
-    decPos = 90.0 - DecTarget;
-    if (DecTarget < 0.0) decPos = 90.0 + std::abs(DecTarget);
-    decPos = decPos * DECFACT;
+	decPos = decPos * DECFACT;
 
-    std::ostringstream ossDec;
-    ossDec << std::fixed << std::setprecision(0) << decPos;
-    CmdStr = ossDec.str();
+	std::ostringstream decStream;
+	decStream << std::fixed << std::setprecision(0) << decPos;
+	std::string decSteps = decStream.str();
 
-    CmdStr = "AY VL" + yvlslew + " MA" + CmdStr + " GD ID;";
-    SendCommand(CmdStr);
+	std::string decCmd = "AY VL" + yvlslew + " MA" + decSteps + " GD ID;";
+
+	std::cout << "GoQuad2to1:\n";
+	std::cout << "  RaTarget=" << RaTarget << " DecTarget=" << DecTarget << "\n";
+	std::cout << "  EastHor=" << EastHor << "\n";
+	std::cout << "  RA cmd: " << raCmd << "\n";
+	std::cout << "  DEC cmd: " << decCmd << "\n";
+
+	if (!SendCommand(raCmd)) {
+		std::cout << "Failed to send RA slew command\n";
+	}
+
+	if (!SendCommand(decCmd)) {
+		std::cout << "Failed to send DEC slew command\n";
+	}
 }

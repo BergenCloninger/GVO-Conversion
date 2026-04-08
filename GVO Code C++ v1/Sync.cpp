@@ -4,56 +4,67 @@
 #include "OMS68SERMC.h"
 #include "GlobalValues.h"
 #include "GetQandYU.h"
+#include "utils.h"
 #include <windows.h>
 #include <cmath>
 #include <iostream>
+#include <sstream>
+#include <iomanip>
 
 void SyncScope() {
-    if (movingRA || movingDEC) //don't sync while moving
-        return;
+	if (movingRA || movingDEC)
+		return;
 
-    Coord* coord = CommUtils::GetCoordPtr();
+	Coord* coord = CommUtils::GetCoordPtr();
+	if (!coord) {
+		std::cerr << "SyncScope: Coord is null\n";
+		return;
+	}
 
-    double Alt, HA, Xcount, Ycount;
-    int quad;
+	double Alt, HA, Xcount, Ycount;
+	int quad;
 
-    GetQandY(coord->RASync, coord->DecSync, Alt, HA, Xcount, Ycount, quad, yPole);
+	GetQandY(coord->RASync, coord->DecSync, Alt, HA, Xcount, Ycount, quad, yPole);
 
-    if (Alt < 0.0) {
-       	std::cerr << "Sync below Horizon\n";
-        return;
-    }
+	if (Alt < 0.0) {
+		std::cerr << "Sync below Horizon\n";
+		return;
+	}
 
-    // RA
-    std::string CmdStr;
-    std::string PreStrng;
+	std::string CmdStr, PreStrng;
 
-    if (Xcount < 0)
-        PreStrng = "AX LP-";
-    else
-        PreStrng = "AX LP";
+	// RA position load
+	if (Xcount < 0.0)
+		PreStrng = "AX LP-";
+	else
+		PreStrng = "AX LP";
 
-    Xcount = std::abs(Xcount);
-    CmdStr = PreStrng + std::to_string(static_cast<long>(Xcount)) + ";";
-    SendCommand(CmdStr);
+	Xcount = std::abs(Xcount);
 
-    // Back to tracking
-    CmdStr = "AX JF" + std::to_string(TrkRate) + ";";
-    SendCommand(CmdStr);
+	std::ostringstream raStream;
+	raStream << std::fixed << std::setprecision(0) << Xcount;
+	CmdStr = PreStrng + raStream.str() + ";";
+	SendCommand(CmdStr);
 
-    // DEC
-    if (Ycount < 0)
-        PreStrng = "AY LP-";
-    else
-        PreStrng = "AY LP";
+	// Back to tracking
+	CmdStr = "AX JF" + FormatDouble(TrkRate, 10, 6) + ";";
+	SendCommand(CmdStr);
 
-    Ycount = std::abs(Ycount);
-    CmdStr = PreStrng + std::to_string(static_cast<long>(Ycount)) + ";";
-    SendCommand(CmdStr);
+	// DEC position load
+	if (Ycount < 0.0)
+		PreStrng = "AY LP-";
+	else
+		PreStrng = "AY LP";
 
-    // Reset sync request
-    coord->RASync = 0.0;
-    coord->DecSync = 0.0;
+	Ycount = std::abs(Ycount);
 
-    UpdateCoord();  // call your C++ function to refresh RA/Dec display
+	std::ostringstream decStream;
+	decStream << std::fixed << std::setprecision(0) << Ycount;
+	CmdStr = PreStrng + decStream.str() + ";";
+	SendCommand(CmdStr);
+
+	coord->RASync = 0.0;
+	coord->DecSync = 0.0;
+
+	UpdateCoord();
 }

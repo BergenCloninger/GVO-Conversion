@@ -1,22 +1,23 @@
 #include <iostream>
+#include <thread>
+#include <chrono>
 #include <string>
 #include <cmath>
 #include <cstdint>
 #include <functional>
 #include <windows.h>
-#include <thread>
-#include <chrono>
+#include <conio.h>
 #include "OMS68SERMC.h"
 #include "CommUtils.h"
 #include "TimerUnit.h"
 #include "GlobalValues.h"
 #include "StateVar.h"
+#include "Config.h"
 
-//NEED TO SET CONSTANTS FROM PASCAL MAIN FILE
 double TrkRate = 0.0;
 double RAFact = 0.0, DECFACT = 0.0;
 double C_Lat = 0.0, C_Long = 0.0;
-//double SidTimeFract = 0.0;
+
 double SidTime = 0.0;
 double RANow = 0.0, DECNow = 0.0;
 double RaTarget = 0.0, DecTarget = 0.0, Meridian = 0.0, EastHor = 0.0, WestHor = 0.0;
@@ -64,6 +65,11 @@ double SolarParallax = 8.794 * SToR;
 int FK4System = 1;
 int FK5System = 2;
 
+//Com port and DLL paths (defaults, override in config.ini)
+int ComPortNumber = 1;
+std::string OmsDllPath = "68SERMC.DLL";
+std::string TeleApiDllPath = "teleapi.dll";
+
 std::string name, commandBuffer;
 using TeleAPICallBack = std::function<void(int)>;
 
@@ -85,22 +91,32 @@ void PrintLastError() {
 }
 
 void loadparams() {
-    tdecfact = ((360.0 / 338) * 3600) / 50000;
-    tdecfact = 1 / tdecfact * 3600;
+	tdecfact = ((360.0 / 338.0) * 3600.0) / 50000.0;
+	tdecfact = 1.0 / tdecfact;
+	tdecfact *= 3600.0;
 
-    TrkRate = 500.6;
-    xvlslew = "75000";
-    yvlslew = "50000";
-    xvl5inch = "2000";
-    yvl5inch = "2000";
-    xvl = "10000";
-    xac = "35000";
-    yvl = "5000";
-    yac = "25000";
-    yacmax = "25000";
-    yvlmax = "100000";
-    xacmax = "35000";
-    xvlmax = "75000";
+	TrkRate = 500.6;
+	RAFact = 120000.0;
+	DECFACT = tdecfact;
+	DecBack = 30;
+	C_Lat = 38.508741;
+	C_Long = 106.9385583;
+
+	xvlslew = "75000";
+	yvlslew = "50000";
+	xvl5inch = "2000";
+	yvl5inch = "2000";
+	xvl = "10000";
+	xac = "35000";
+	yvl = "5000";
+	yac = "25000";
+	yacmax = "25000";
+	yvlmax = "100000";
+	xacmax = "35000";
+	xvlmax = "75000";
+
+	yPole = 1;
+	NoPassword = true;
 }
 
 void JogNorthCommand() {
@@ -205,11 +221,22 @@ void ManualControlMenu() {
                 Park();
                 break;
             case 7:
+                std::cout << "Timer loop running. Press ESC to return to menu.\n";
+
                 while (true) {
                     TimerUpdate();
 
-		            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    if (_kbhit()) {
+                        int ch = _getch();
+                        if (ch == 27) { // ESC
+                            std::cout << "Returning to menu...\n";
+                            break;
+                        }
+                    }
+
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 }
+                break;
             case 0:
                 std::cout << "Exiting manual control..." << std::endl;
                 return;
@@ -220,13 +247,18 @@ void ManualControlMenu() {
 }
 
 int main() {
+    LoadConfig("config.ini");
+	ApplyConfig();
+    PrintConfig();
+
     //DLL init
-    if (!CommUtils::InitSharedMem("E:\\VSCode Projects\\Observatory Code Conversion\\GVO-Conversion\\GVO Code C++ v1\\teleapi.dll")) {
-        std::cerr << "Failed to initialize shared memory.\n";
+    if (!CommUtils::InitSharedMem(TeleApiDllPath)) {
+        std::cout << "Failed to init shared memory\n";
         return 1;
     }
 
-    if (!LoadDLL()) return 1;
+    if (!LoadDLL(OmsDllPath)) return 1;
+    CommRecord.CommPortNumber = ComPortNumber;
 
     if (!InitComm()) {
         std::cerr << "Failed to initialize telescope." << std::endl;
