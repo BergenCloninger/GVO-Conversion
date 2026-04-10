@@ -15,7 +15,6 @@ extern char Response[256];
 
 void TimerUpdate() {
 	Coord* CoordMem = CommUtils::GetCoordPtr();
-	std::cout << "CoordMem = " << CoordMem << std::endl;
 
 	if (!CoordMem) {
 		std::cout << "CoordMem is null" << std::endl;
