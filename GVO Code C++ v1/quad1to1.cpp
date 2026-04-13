@@ -7,7 +7,7 @@
 #include <sstream>
 #include <iostream>
 
-void GoQuad1to1(double Xcount, double Ycount) {
+bool GoQuad1to1(double Xcount, double Ycount) {
 	movingRA = true;
 	movingDEC = true;
 
@@ -18,7 +18,7 @@ void GoQuad1to1(double Xcount, double Ycount) {
 	raStepStream << std::fixed << std::setprecision(0) << RaPos;
 	std::string raSteps = raStepStream.str();
 
-	std::string raCmd = "AX VL" + xvlslew + " MA-" + raSteps + " GD ID;";
+	std::string raCmd = "AX  VL" + xvlslew + " MA-" + raSteps + " GD ID;";
 
 	std::ostringstream decStepStream;
 	decStepStream << std::fixed << std::setprecision(0) << std::abs(decPos);
@@ -26,25 +26,24 @@ void GoQuad1to1(double Xcount, double Ycount) {
 
 	std::string decCmd;
 	if (decPos < 0.0) {
-		decCmd = "AY VL" + yvlslew + " MA-" + decSteps + " GD ID;";
+		decCmd = "AY  VL" + yvlslew + " MA-" + decSteps + " GD ID;";
 	} else {
-		decCmd = "AY VL" + yvlslew + " MA" + decSteps + " GD ID;";
+		decCmd = "AY  VL" + yvlslew + " MA" + decSteps + " GD ID;";
 	}
 
-	std::cout << "GoQuad1to1:\n";
-	std::cout << "  Xcount=" << Xcount << " Ycount=" << Ycount << "\n";
-	std::cout << "  RA cmd: " << raCmd << "\n";
-	std::cout << "  DEC cmd: " << decCmd << "\n";
-
-    // if (!SendCommand("AX ST;")) { TODO: The pascal code has a stop command set but not called, unsure if it's a bug or intentional. If intentional, add it in during testing (for all x to x quad functions)
-	// 	std::cout << "Failed to send AX ST;\n";
-	// }
-
-	if (!SendCommand(raCmd)) {
-		std::cout << "Failed to send RA slew command\n";
+	bool raOk = SendCommand(raCmd);
+	if (!raOk) {
+		movingRA = false;
+		movingDEC = false;
+		return false;
 	}
 
-	if (!SendCommand(decCmd)) {
-		std::cout << "Failed to send DEC slew command\n";
+	bool decOk = SendCommand(decCmd);
+	if (!decOk) {
+		movingRA = false;
+		movingDEC = false;
+		return false;
 	}
+
+	return true;
 }

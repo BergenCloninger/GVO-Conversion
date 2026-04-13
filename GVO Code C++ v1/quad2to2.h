@@ -1,3 +1,2 @@
 #pragma once
-
-void GoQuad2to2();
+bool GoQuad2to2(double raTarget, double decTarget, double eastHor);

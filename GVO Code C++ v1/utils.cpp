@@ -5,22 +5,26 @@
 #include <sstream>
 #include <iomanip>
 #include <string>
+#include <iostream> // TODO: Remove this 
 
 double SidTimeFract = 0.0;
 
 // Helper: wrap angle to 0..2pi
 double mod2pi(double x) {
-    x = x - std::floor(x / pi2) * pi2;
-    if (x < 0) x += pi2;
-    return x;
+	x = x - std::trunc(x / pi2) * pi2;
+	if (x < 0) x += pi2;
+	return x;
 }
 
 // Sidereal time at Greenwich 0h UT
 double SiderealTime0(double T) {
-    T = T - std::floor(T * 36525.0 + 0.5) * 36525.0;  // T at 0h
-    double Theta = T * (36000.770053608 + T * (0.000387933 - T / 38710000.0));
-    double TempReal = mod2pi((100.46061837 + Theta) * DToR);
-    return TempReal * RToH;  // radians -> hours
+	double day_term = T * 36525.0 + 0.5;
+	double frac_part = day_term - std::floor(day_term);
+	T = T - frac_part * 36525.0;
+
+	double Theta = T * (36000.770053608 + T * (0.000387933 - T / 38710000.0));
+	double TempReal = mod2pi((100.46061837 + Theta) * DToR);
+	return TempReal * RToH;
 }
 
 // Sidereal time at Greenwich at any UT
@@ -68,54 +72,77 @@ double JDToT(double JD) {
 }
 
 // Set local sidereal time
-double SetStime() {
-    using namespace std::chrono;
+    double SetStime() {
+	time_t t_now = time(nullptr);
+	tm local_tm = *localtime(&t_now);
 
-    auto now = system_clock::now();
-    time_t t_now = system_clock::to_time_t(now);
-    tm local_tm = *localtime(&t_now);
+	double instant_here =
+		local_tm.tm_hour +
+		local_tm.tm_min / 60.0 +
+		local_tm.tm_sec / 3600.0;
 
-	tm utc_tm;
-	gmtime_s(&utc_tm, &t_now);
+	int hour_offset = static_cast<int>(std::floor(C_Long / 15.0));
 
-	double InstantHere = local_tm.tm_hour + local_tm.tm_min / 60.0 + local_tm.tm_sec / 3600.0;
-	double InstantG   = utc_tm.tm_hour + utc_tm.tm_min / 60.0 + utc_tm.tm_sec / 3600.0;
+	// Copy local broken-down time first
+	tm present_tm = local_tm;
+	present_tm.tm_hour += hour_offset;
 
-    if (InstantG < 0) InstantG += 24;
-    if (InstantG >= 24) InstantG -= 24;
+	// Normalize exactly once
+	mktime(&present_tm);
 
-    MeusDATE date;
-    date.yy = local_tm.tm_year + 1900;
-    date.mm = local_tm.tm_mon + 1;
-    date.dd = local_tm.tm_mday;
-    date.h = local_tm.tm_hour;
-    date.m = local_tm.tm_min;
-    date.s = local_tm.tm_sec;
+	double instant_g =
+		present_tm.tm_hour +
+		present_tm.tm_min / 60.0 +
+		present_tm.tm_sec / 3600.0;
 
-    double JD = CalendarToJD(date);
-    double UT = JDToT(JD);
+	// Match Pascal: DST modifies InstantG only, not present_tm/date
+	if (local_tm.tm_isdst > 0) {
+		instant_g -= 1.0;
+	}
+	if (instant_g < 0.0) instant_g += 24.0;
 
-    double SidTime = SiderealTime0(UT);
-    SidTime += 1.00273790935 * InstantG;
-    if (SidTime > 24) SidTime -= 24.0;
+	MeusDATE date;
+	date.yy = present_tm.tm_year + 1900;
+	date.mm = present_tm.tm_mon + 1;
+	date.dd = present_tm.tm_mday;
+	date.h = present_tm.tm_hour;
+	date.m = present_tm.tm_min;
+	date.s = present_tm.tm_sec;
 
-    // Convert to local longitude
-    SidTime -= C_Long / 15.0;
-    if (SidTime < 0) SidTime += 24.0;
-	SidTimeFract = SidTime - InstantHere;
-    return SidTime;
+	double JD = CalendarToJD(date);
+	double UT = JDToT(JD);
+
+	SidTime = SiderealTime0(UT);
+	SidTime = SidTime + (1.00273790935 * instant_g);
+	if (SidTime > 24.0) SidTime -= 24.0;
+
+	SidTime = SidTime - (C_Long / 15.0);
+	if (SidTime < 0.0) SidTime += 24.0;
+
+	SidTimeFract = SidTime - instant_here;
+
+	std::cout << "SetStime:"
+			  << " InstantHere=" << instant_here
+			  << " InstantG=" << instant_g
+			  << " date=" << date.yy << "-" << date.mm << "-" << date.dd
+			  << " SidTime=" << SidTime
+			  << " SidTimeFract=" << SidTimeFract
+			  << "\n";
+
+	return SidTime;
 }
 
-// Get current local sidereal time
 double GetStime() {
-    using namespace std::chrono;
+	time_t t_now = time(nullptr);
+	tm local_tm = *localtime(&t_now);
 
-    auto now = system_clock::now();
-    time_t t_now = system_clock::to_time_t(now);
-    tm local_tm = *localtime(&t_now);
+	double temp_real =
+		local_tm.tm_hour +
+		local_tm.tm_min / 60.0 +
+		local_tm.tm_sec / 3600.0;
 
-    double InstantHere = local_tm.tm_hour + local_tm.tm_min / 60.0 + local_tm.tm_sec / 3600.0;
-    double result = SidTimeFract + InstantHere;
-    if (result >= 24.0) result -= 24.0;
-    return result;
+	double result = SidTimeFract + temp_real;
+	if (result > 24.0) result -= 24.0;
+
+	return result;
 }

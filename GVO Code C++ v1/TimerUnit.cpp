@@ -1,108 +1,138 @@
 #include "TimerUnit.h"
-#include <iostream>
-#include <thread>
-#include <chrono>
+
 #include <cctype>
-#include "CommUtils.h"
-#include "OMS68SERMC.h"
+#include <cstdio>
+#include <iostream>
+
 #include "CalcCoord.h"
+#include "CommUtils.h"
+#include "GlobalValues.h"
+#include "HandPadle.h"
+#include "OMS68SERMC.h"
 #include "Slew.h"
 #include "Sync.h"
-#include "HandPadle.h"
-#include "GlobalValues.h"
 
 extern char Response[256];
 
 void TimerUpdate() {
-	Coord* CoordMem = CommUtils::GetCoordPtr();
+	static bool inTimerUpdate = false;
+	if (inTimerUpdate) {
+		return;
+	}
+	inTimerUpdate = true;
 
+	struct TimerGuard {
+		bool& flag;
+		~TimerGuard() { flag = false; }
+	} guard{inTimerUpdate};
+
+	Coord* CoordMem = CommUtils::GetCoordPtr();
 	if (!CoordMem) {
-		std::cout << "CoordMem is null" << std::endl;
+		std::cout << "CoordMem is null\n";
 		return;
 	}
 
-	PrintCoordState(CoordMem);
-
-	std::string CmdStr;
-	std::string CmdStr2;
-	std::string TempStr;
-
+	// -------------------- If moving, check for end of move --------------------
 	if (movingRA) {
-		SendAndGetCommand(&CommRecord, "AX QA;", Response, sizeof(Response));
-		TempStr = Response;
+		char axResp[256] = {};
+		if (!SendAndGetCommand(&CommRecord, "AX QA;", axResp, sizeof(axResp))) {
+			return;
+		}
 
-		if (TempStr.length() == 4) {
-			if (std::toupper(TempStr[1]) == 'D') {
-				movingRA = false;
+		std::string tempStr = axResp;
 
-				std::cout << "RA Axis Move Complete\n";
+		if (tempStr.length() != 4) {
+			return;
+		}
 
-				char buf[64];
-				sprintf(buf, "%.6f", TrkRate);
+		if (std::toupper(static_cast<unsigned char>(tempStr[1])) == 'D') {
+			movingRA = false;
+			std::cout << "RA Axis Move Complete\n";
 
-				CmdStr2 = buf;
-				CmdStr = "AX JF" + CmdStr2 + ";";
+			char buf[64];
+			std::sprintf(buf, "%.6f", TrkRate);
 
-				SendCommand(CmdStr);
+			std::string cmdStr = "AX JF" + std::string(buf) + ";";
+			std::cout << "[TimerUpdate] SEND: [" << cmdStr << "]\n";
+			SendCommand(cmdStr);
 
-				CoordMem->RAGoto = 0.0;
-			}
+			CoordMem->RAGoto = 0.0;
 		}
 	}
 
 	if (movingDEC) {
-		SendAndGetCommand(&CommRecord, "AY QA;", Response, sizeof(Response));
+		char ayResp[256] = {};
+		if (!SendAndGetCommand(&CommRecord, "AY QA;", ayResp, sizeof(ayResp))) {
+			return;
+		}
 
-		TempStr = Response;
+		std::string tempStr = ayResp;
 
-	if (TempStr.length() == 4){
-			if (std::toupper(TempStr[1]) == 'D') {
-				movingDEC = false;
+		if (tempStr.length() != 4) {
+			return;
+		}
 
-				std::cout << "DEC Axis Move Complete\n";
+		if (std::toupper(static_cast<unsigned char>(tempStr[1])) == 'D') {
+			movingDEC = false;
+			std::cout << "DEC Axis Move Complete\n";
 
-				CoordMem->DecGoto = 0.0;
-			}
+			CoordMem->DecGoto = 0.0;
 		}
 	}
 
-
+	// -------------------- Update coordinates --------------------
 	HalfSecondCounter++;
-
-	if (HalfSecondCounter >= 5)
+	if (HalfSecondCounter >= 5) {
 		HalfSecondCounter = 0;
+	}
 
 	if (HalfSecondCounter == 4) {
 		UpdateCoord();
 	}
 
-	if (movingRA || movingDEC)
+	// -------------------- Leave if in motion --------------------
+	// This is the Pascal "wait on the slew" behavior.
+	if (movingRA || movingDEC) {
 		return;
+	}
+
+	// -------------------- Sync if requested --------------------
 	if (CoordMem->RASync != 0.0 && CoordMem->DecSync != 0.0) {
 		SyncScope();
-	}
-
-	if (CoordMem->RAGoto != 0.0 && CoordMem->DecGoto != 0.0) {
-		SlewScope();
 		return;
 	}
 
+	// -------------------- Slew if requested --------------------
+	if (CoordMem->RAGoto != 0.0 && CoordMem->DecGoto != 0.0) {
+		double raTarget = CoordMem->RAGoto;
+		double decTarget = CoordMem->DecGoto;
+
+		std::cout << "[TimerUpdate] starting slew request "
+				  << "RAGoto=" << raTarget
+				  << " DecGoto=" << decTarget
+				  << "\n";
+
+		SlewScope(raTarget, decTarget);
+		return;
+	}
+
+	// -------------------- Park if requested --------------------
 	if (Parkit) {
 		Parkit = false;
 
 		movingRA = true;
 		movingDEC = true;
-		SendCommand("AX KL;");
-
-		std::this_thread::sleep_for(std::chrono::milliseconds(300));
-
-		SendCommand("AA VL75000,50000; MA0,0,,; GD; ID;");
 
 		std::cout << "Parking Telescope...\n";
+
+		SendCommand("AX KL;");
+		Sleep(300);
+		SendCommand("AA VL75000,50000; MA0,0,,; GD; ID;");
 
 		return;
 	}
 
+	// -------------------- Handle hand paddle --------------------
 	HandleHandPadle();
 }
 
@@ -135,12 +165,13 @@ void PrintCoordState(Coord* c) {
 void AddTicks() {
 	std::cout << "Quadrant: " << quadrant << "\n";
 
-	if (yPole > 0)
+	if (yPole > 0) {
 		std::cout << "Y Polarity: +\n";
-	else
+	}
+	else {
 		std::cout << "Y Polarity: -\n";
+	}
 }
-
 
 void Padle_Timer_Update() {
 	HandleHandPadle();

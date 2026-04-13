@@ -48,9 +48,6 @@ void ApplyConfig() {
 		if (config.count("RAFact"))
 			RAFact = std::stod(config["RAFact"]);
 
-		if (config.count("DECFACT"))
-			DECFACT = std::stod(config["DECFACT"]);
-
 		if (config.count("C_Lat"))
 			C_Lat = std::stod(config["C_Lat"]);
 

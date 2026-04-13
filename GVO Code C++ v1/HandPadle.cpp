@@ -12,6 +12,10 @@
 #include <cmath>
 
 void HandleHandPadle() {
+	if (movingRA || movingDEC) {
+		return;
+	}
+	
 	std::string CmdStr, TempStr;
 	int i;
 

@@ -1,8 +1,27 @@
+#include <windows.h>
+
+#include <cstring>
+#include <iomanip>
 #include <iostream>
 #include <string>
-#include <windows.h>
+#include <vector>
+
 #include "CommUtils.h"
 #include "OMS68SERMC.h"
+
+namespace {
+	bool g_commBusy = false;
+
+	struct BusyGuard {
+		bool& flag;
+		explicit BusyGuard(bool& f) : flag(f) {
+			flag = true;
+		}
+		~BusyGuard() {
+			flag = false;
+		}
+	};
+}
 
 // Initialize SendString function from DLL
 bool InitCommUtils() {
@@ -19,8 +38,12 @@ bool InitCommUtils() {
 		GetProcAddress(DLLHandle, "SendAndGetString")
 	);
 
-	if (!pSendString) std::cerr << "Failed to get SendString pointer\n";
-	if (!pSendAndGetString) std::cerr << "Failed to get SendAndGetString pointer\n";
+	if (!pSendString) {
+		std::cerr << "Failed to get SendString pointer\n";
+	}
+	if (!pSendAndGetString) {
+		std::cerr << "Failed to get SendAndGetString pointer\n";
+	}
 
 	return pSendString != nullptr && pSendAndGetString != nullptr;
 }
@@ -38,17 +61,17 @@ bool InitComm() {
 		std::cerr << "InitOmsCommPort failed with error code: " << result << "\n";
 
 		switch (result) {
-		case INVALID_PORT: std::cerr << " -> INVALID_PORT\n"; break;
-		case INVALID_BAUD_RATE: std::cerr << " -> INVALID_BAUD_RATE\n"; break;
-		case PORT_NOT_AVAILABLE: std::cerr << " -> PORT_NOT_AVAILABLE\n"; break;
-		case COMM_TIMEOUT_ERROR: std::cerr << " -> COMM_TIMEOUT_ERROR\n"; break;
-		case GET_COMM_STATE_ERROR: std::cerr << " -> GET_COMM_STATE_ERROR\n"; break;
-		case SET_COMM_STATE_ERROR: std::cerr << " -> SET_COMM_STATE_ERROR\n"; break;
-		case COMM_WRITE_ERROR: std::cerr << " -> COMM_WRITE_ERROR\n"; break;
-		case COMM_READ_ERROR: std::cerr << " -> COMM_READ_ERROR\n"; break;
-		case SERVO_READ_ERROR: std::cerr << " -> SERVO_READ_ERROR\n"; break;
-		case COMM_IO_TIMEOUT: std::cerr << " -> COMM_IO_TIMEOUT\n"; break;
-		default: std::cerr << " -> Unknown error\n"; break;
+			case INVALID_PORT: std::cerr << " -> INVALID_PORT\n"; break;
+			case INVALID_BAUD_RATE: std::cerr << " -> INVALID_BAUD_RATE\n"; break;
+			case PORT_NOT_AVAILABLE: std::cerr << " -> PORT_NOT_AVAILABLE\n"; break;
+			case COMM_TIMEOUT_ERROR: std::cerr << " -> COMM_TIMEOUT_ERROR\n"; break;
+			case GET_COMM_STATE_ERROR: std::cerr << " -> GET_COMM_STATE_ERROR\n"; break;
+			case SET_COMM_STATE_ERROR: std::cerr << " -> SET_COMM_STATE_ERROR\n"; break;
+			case COMM_WRITE_ERROR: std::cerr << " -> COMM_WRITE_ERROR\n"; break;
+			case COMM_READ_ERROR: std::cerr << " -> COMM_READ_ERROR\n"; break;
+			case SERVO_READ_ERROR: std::cerr << " -> SERVO_READ_ERROR\n"; break;
+			case COMM_IO_TIMEOUT: std::cerr << " -> COMM_IO_TIMEOUT\n"; break;
+			default: std::cerr << " -> Unknown error\n"; break;
 		}
 		return false;
 	}
@@ -59,37 +82,90 @@ bool InitComm() {
 
 // Wrapper "send command" function for DLL
 bool SendCommand(const std::string& cmd) {
-	std::cout << "SEND: [" << cmd << "]\n";
-	if (!pSendString) return false;
-
-	char buffer[256];
-	strncpy_s(buffer, cmd.c_str(), sizeof(buffer) - 1);
-	buffer[sizeof(buffer) - 1] = 0;
-
-	long result = pSendString(&CommRecord, buffer);
-	if (result != SUCCESS) {
-		std::cerr << "SendString failed with code " << result << std::endl;
+	if (g_commBusy) {
 		return false;
 	}
+
+	if (!pSendString) {
+		return false;
+	}
+
+	if (cmd.empty()) {
+		return false;
+	}
+
+	BusyGuard guard(g_commBusy);
+
+	//std::cout << "SEND: [" << cmd << "]\n";
+
+	std::vector<char> buffer(cmd.begin(), cmd.end());
+	buffer.push_back('\0');
+
+	long result = pSendString(&CommRecord, buffer.data());
+
+	if (result != SUCCESS) {
+		return false;
+	}
+
 	return true;
 }
 
 // Send a command and get a response string
 bool SendAndGetCommand(SCOMM_STRUCT* comm, const char* cmd, char* response, size_t respSize) {
-	std::cout << "SEND: [" << cmd << "]\n";
-
-	if (!pSendAndGetString) return false;
-	if (!comm || !cmd || !response || respSize == 0) return false;
-
-	long result = pSendAndGetString(comm, const_cast<char*>(cmd), response);
-	if (result != SUCCESS) {
-		std::cerr << "SendAndGetString failed with code " << result << std::endl;
-		if (respSize > 0) response[0] = 0;
+	if (g_commBusy) {
+		if (response && respSize > 0) {
+			response[0] = '\0';
+		}
 		return false;
 	}
 
-	// Ensure null termination
-	response[respSize - 1] = 0;
+	if (!pSendAndGetString) {
+		if (response && respSize > 0) {
+			response[0] = '\0';
+		}
+		return false;
+	}
+
+	if (!comm) {
+		if (response && respSize > 0) {
+			response[0] = '\0';
+		}
+		return false;
+	}
+
+	if (!cmd) {
+		if (response && respSize > 0) {
+			response[0] = '\0';
+		}
+		return false;
+	}
+
+	if (!response) {
+		return false;
+	}
+
+	if (respSize == 0) {
+		return false;
+	}
+
+	BusyGuard guard(g_commBusy);
+
+	response[0] = '\0';
+
+	//std::cout << "SEND: [" << cmd << "]\n";
+
+	std::vector<char> cmdBuffer(cmd, cmd + std::strlen(cmd));
+	cmdBuffer.push_back('\0');
+
+	long result = pSendAndGetString(comm, cmdBuffer.data(), response);
+
+	response[respSize - 1] = '\0';
+
+	if (result != SUCCESS) {
+		response[0] = '\0';
+		return false;
+	}
+
 	return true;
 }
 
@@ -100,6 +176,7 @@ void __stdcall DLLWork(int value) {
 // Shared memory helpers
 namespace CommUtils {
 	static HMODULE hDLL = nullptr;
+
 	using getndomem_t = void* (__stdcall*)();
 	using setcallback_t = void (__stdcall*)(void (__stdcall*)(int));
 
@@ -107,7 +184,7 @@ namespace CommUtils {
 	static setcallback_t setcallback = nullptr;
 
 	void* pndomem = nullptr;
-	
+
 	bool InitSharedMem(const std::string& dllPath) {
 		hDLL = LoadLibraryA(dllPath.c_str());
 		if (!hDLL) {
@@ -115,7 +192,6 @@ namespace CommUtils {
 			return false;
 		}
 
-		// ---- Load setcallback (ordinal 41) ----
 		FARPROC cbProc = GetProcAddress(hDLL, MAKEINTRESOURCEA(41));
 		if (!cbProc) {
 			std::cerr << "Failed to load setcallback (ordinal 41)\n";
@@ -125,7 +201,6 @@ namespace CommUtils {
 			std::cout << "setcallback registered\n";
 		}
 
-		// ---- Load getndomem (ordinal 40) ----
 		FARPROC memProc = GetProcAddress(hDLL, MAKEINTRESOURCEA(40));
 		if (!memProc) {
 			std::cerr << "Failed to find ordinal 40\n";
@@ -133,29 +208,30 @@ namespace CommUtils {
 		}
 
 		getndomem = reinterpret_cast<getndomem_t>(memProc);
-
 		pndomem = getndomem();
 
-		return pndomem != nullptr;
+		if (!pndomem) {
+			std::cerr << "getndomem returned null\n";
+			return false;
+		}
+
+		std::cout << "Shared memory initialized at " << pndomem << "\n";
+		return true;
 	}
 
 	Coord* GetCoordPtr() {
-		if (getndomem) {
-			pndomem = getndomem();
-			// std::cout << "getndomem() returned " << pndomem << std::endl; //Remove after testing.
-		}
-
 		if (!pndomem) {
-			std::cerr << "Shared memory not initialized (pndomem is null)\n";
+			std::cerr << "Shared memory not initialized\n";
 			return nullptr;
 		}
-
 		return reinterpret_cast<Coord*>(pndomem);
 	}
 
 	void ShutdownSharedMem() {
 		pndomem = nullptr;
 		getndomem = nullptr;
+		setcallback = nullptr;
+
 		if (hDLL) {
 			FreeLibrary(hDLL);
 			hDLL = nullptr;

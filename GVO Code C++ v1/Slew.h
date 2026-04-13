@@ -11,4 +11,4 @@
 #include "GetQandYU.h"
 
 // Slew the telescope to the target RA/Dec based on quadrant
-void SlewScope();
+void SlewScope(double raTarget, double decTarget);

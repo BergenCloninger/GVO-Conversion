@@ -13,6 +13,7 @@
 #include "GlobalValues.h"
 #include "StateVar.h"
 #include "Config.h"
+#include "utils.h"
 
 double TrkRate = 0.0;
 double RAFact = 0.0, DECFACT = 0.0;
@@ -35,6 +36,7 @@ bool SlewSelect = true;
 bool EastOfMeridian = true;
 bool LookingEast = true;
 bool TargetEastOfMeridian = true;
+bool TimerEnabled = true;
 
 uint8_t keystroke = 0, pcxdataout = 0, status = 0, HalfSecondCounter = 0;
 int quadrant = 1, targetQuadrant = 1;
@@ -221,14 +223,14 @@ void ManualControlMenu() {
                 Park();
                 break;
             case 7:
-                std::cout << "Timer loop running. Press ESC to return to menu.\n";
-
                 while (true) {
-                    TimerUpdate();
+                    if (TimerEnabled) {
+                        TimerUpdate();
+                    }
 
                     if (_kbhit()) {
                         int ch = _getch();
-                        if (ch == 27) { // ESC
+                        if (ch == 27) {
                             std::cout << "Returning to menu...\n";
                             break;
                         }
@@ -247,6 +249,8 @@ void ManualControlMenu() {
 }
 
 int main() {
+    loadparams();
+    SetStime();
     LoadConfig("config.ini");
 	ApplyConfig();
     PrintConfig();
@@ -267,7 +271,16 @@ int main() {
         std::cout << "Connected to device on port " << CommRecord.CommPortNumber << "\n";
     }
 
-    loadparams();
+	char buf[64];
+	sprintf(buf, "%.6f", TrkRate);
+
+	std::string cmd = "AX JF" + std::string(buf) + ";";
+	std::cout << "[INIT TRACKING] " << cmd << "\n";
+
+	if (!SendCommand(cmd)) {
+		std::cout << "Failed to start RA tracking!\n";
+	}
+
     ManualControlMenu();
     UnloadDLL();
     return 0;

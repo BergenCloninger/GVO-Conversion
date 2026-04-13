@@ -68,3 +68,5 @@ extern double SolarParallax;
 // Coordinate system identifiers
 extern int FK4System;
 extern int FK5System;
+
+extern bool TimerEnabled;

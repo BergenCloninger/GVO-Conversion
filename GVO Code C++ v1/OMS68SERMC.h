@@ -95,10 +95,10 @@ struct SCOMM_STRUCT {
     int CommPortNumber;
     int BaudRate;
     int AxisDoneFlags;
-    bool GlobalDone;
-    bool Overtravel;
-    bool CmdError;
-    bool Slip;
+    int GlobalDone;
+    int Overtravel;
+    int CmdError;
+    int Slip;
     int Mode;
     int TimeLimit;
     int LF_Count;
