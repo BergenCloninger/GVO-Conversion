@@ -70,3 +70,6 @@ extern int FK4System;
 extern int FK5System;
 
 extern bool TimerEnabled;
+extern bool lowAltitudeLockout;
+extern bool parkInProgress;
+extern bool parkCompleted;

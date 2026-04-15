@@ -56,6 +56,10 @@ void TimerUpdate() {
 			std::cout << "[TimerUpdate] SEND: [" << cmdStr << "]\n";
 			SendCommand(cmdStr);
 
+			Xstate = StateVar::Tracking;
+			Ystate = StateVar::Tracking;
+			std::cout << "[TimerUpdate] Xstate/Ystate set to Tracking after move complete\n";
+
 			CoordMem->RAGoto = 0.0;
 		}
 	}
@@ -80,7 +84,6 @@ void TimerUpdate() {
 		}
 	}
 
-	// -------------------- Update coordinates --------------------
 	HalfSecondCounter++;
 	if (HalfSecondCounter >= 5) {
 		HalfSecondCounter = 0;
@@ -90,19 +93,15 @@ void TimerUpdate() {
 		UpdateCoord();
 	}
 
-	// -------------------- Leave if in motion --------------------
-	// This is the Pascal "wait on the slew" behavior.
 	if (movingRA || movingDEC) {
 		return;
 	}
 
-	// -------------------- Sync if requested --------------------
 	if (CoordMem->RASync != 0.0 && CoordMem->DecSync != 0.0) {
 		SyncScope();
 		return;
 	}
 
-	// -------------------- Slew if requested --------------------
 	if (CoordMem->RAGoto != 0.0 && CoordMem->DecGoto != 0.0) {
 		double raTarget = CoordMem->RAGoto;
 		double decTarget = CoordMem->DecGoto;
@@ -116,14 +115,11 @@ void TimerUpdate() {
 		return;
 	}
 
-	// -------------------- Park if requested --------------------
 	if (Parkit) {
 		Parkit = false;
 
 		movingRA = true;
 		movingDEC = true;
-
-		std::cout << "Parking Telescope...\n";
 
 		SendCommand("AX KL;");
 		Sleep(300);
@@ -132,7 +128,22 @@ void TimerUpdate() {
 		return;
 	}
 
-	// -------------------- Handle hand paddle --------------------
+	if (parkInProgress && !movingRA && !movingDEC) {
+		char buf[64];
+		sprintf(buf, "%.6f", TrkRate);
+
+		std::string cmd = "AX JF" + std::string(buf) + ";";
+		std::cout << "[PARK COMPLETE] " << cmd << "\n";
+		SendCommand(cmd);
+
+		Xstate = StateVar::Tracking;
+		Ystate = StateVar::Tracking;
+		std::cout << "[PARK COMPLETE] Xstate/Ystate set to Tracking\n";
+				
+		parkInProgress = false;
+		parkCompleted = true;
+	}
+
 	HandleHandPadle();
 }
 

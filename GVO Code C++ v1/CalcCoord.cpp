@@ -70,7 +70,7 @@ void UpdateCoord() {
 	TempStime = GetStime();
 
 	if (x == 0.0) {
-		std::cerr << "ERROR: RA encoder returning 0 — invalid state\n";
+		std::cerr << "ERROR: RA encoder returning 0: invalid state\n";
 		return;
 	}
 
@@ -123,10 +123,17 @@ void UpdateCoord() {
 
 	// Safety stop below 30 degrees altitude, same as Pascal behavior
 	if (Alt < 30.0) {
-		SendCommand("AA ST;");
+		SendCommand("AA ST;");   // stop all axes
+
 		coord->RAGoto = 0.0;
 		coord->DecGoto = 0.0;
+
+		movingRA = false;
+		movingDEC = false;
+
 		std::cerr << "No track below 30 degrees!\n";
+		lowAltitudeLockout = true;
+		return;
 	}
 	
 	altdeg = static_cast<int>(Alt);

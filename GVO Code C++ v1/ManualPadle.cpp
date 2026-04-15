@@ -4,48 +4,39 @@
 #include <thread>
 #include <chrono>
 #include <string>
+#include <iostream>
 
 // External helpers
 extern std::string FormatDouble(double v, int w, int p);
 
 void BumpNorth() {
-	// Small south pulse first
 	SendCommand("AY JG-50;");
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	SendCommand("AY ST;");
-
 	LastDecNorth = true;
 }
 
 void BumpSouth() {
-	// Small north pulse first
 	SendCommand("AY JG50;");
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	SendCommand("AY ST;");
-
 	LastDecNorth = false;
 }
 
 void HandleFastPadle() {
 	std::string CmdStr;
-	std::string TempStr;
 	std::string xspeed, yspeed;
 
-	// Select speed (5 inch guide vs slew)
+	// Select speed
 	if (!SlewSelect) {
-		xspeed = xvlslew;   // high rate
+		xspeed = xvlslew;
 		yspeed = yvlslew;
-	}
-	else {
-		xspeed = xvl5inch;  // 5 inch guide
+	} else {
+		xspeed = xvl5inch;
 		yspeed = yvl5inch;
 	}
 
 	switch (Xstate) {
-	case StateVar::Off:
-		break;
-
-
 	case StateVar::Tracking:
 		if (EastPushed) {
 			Xstate = StateVar::CorrectingE;
@@ -60,67 +51,24 @@ void HandleFastPadle() {
 			CmdStr = "AX ST; AX JG" + xspeed + ";";
 			SendCommand(CmdStr);
 		}
-
 		break;
-
 
 	case StateVar::CorrectingE:
-		if (!EastPushed && !WestPushed) {
-			Xstate = StateVar::Tracking;
-
-			SendCommand("AX ST;");
-
-			CmdStr = "AX JF" + FormatDouble(TrkRate, 10, 6) + ";";
-			SendCommand(CmdStr);
-		}
-
-		if (EastPushed && WestPushed) {
-			// Stay in CorrectingE (as Pascal)
-			Xstate = StateVar::CorrectingE;
-		}
-
-		break;
-
-
 	case StateVar::CorrectingW:
 		if (!EastPushed && !WestPushed) {
 			Xstate = StateVar::Tracking;
 
 			SendCommand("AX ST;");
-
 			CmdStr = "AX JF" + FormatDouble(TrkRate, 10, 6) + ";";
 			SendCommand(CmdStr);
 		}
-
-		if (EastPushed && WestPushed) {
-			// Stay in CorrectingW
-			Xstate = StateVar::CorrectingW;
-		}
-
 		break;
 
-
-	case StateVar::Slewing:
-		if (!EastPushed && !WestPushed) {
-			Xstate = StateVar::Tracking;
-
-			SendCommand("AX ST;");
-
-			CmdStr = "AX JF" + FormatDouble(TrkRate, 10, 6) + ";";
-			SendCommand(CmdStr);
-		}
-
-		break;
-
-	case StateVar::CorrectingN:
-	case StateVar::CorrectingS:
+	default:
 		break;
 	}
 
 	switch (Ystate) {
-	case StateVar::Off:
-		break;
-
 	case StateVar::Tracking:
 		if (NorthPushed) {
 			if (yPole >= 0 && LastDecNorth)
@@ -134,7 +82,6 @@ void HandleFastPadle() {
 			SendCommand(CmdStr);
 		}
 
-
 		if (SouthPushed) {
 			if (yPole >= 0 && !LastDecNorth)
 				BumpNorth();
@@ -146,49 +93,17 @@ void HandleFastPadle() {
 			CmdStr = "AY JG-" + yspeed + ";";
 			SendCommand(CmdStr);
 		}
-
 		break;
-
 
 	case StateVar::CorrectingN:
-		if (!NorthPushed && !SouthPushed) {
-			Ystate = StateVar::Tracking;
-
-			SendCommand("AY ST;");
-		}
-
-		if (NorthPushed && SouthPushed) {
-			Ystate = StateVar::Slewing;
-		}
-
-		break;
-
-
 	case StateVar::CorrectingS:
 		if (!NorthPushed && !SouthPushed) {
 			Ystate = StateVar::Tracking;
-
 			SendCommand("AY ST;");
 		}
-
-		if (NorthPushed && SouthPushed) {
-			Ystate = StateVar::Slewing;
-		}
-
 		break;
 
-
-	case StateVar::Slewing:
-		if (!NorthPushed && !SouthPushed) {
-			Ystate = StateVar::Tracking;
-
-			SendCommand("AY ST;");
-		}
-
+	default:
 		break;
-
-		case StateVar::CorrectingE:
-		case StateVar::CorrectingW:
-			break;
 	}
 }

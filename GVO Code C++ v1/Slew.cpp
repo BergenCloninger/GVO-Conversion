@@ -47,7 +47,7 @@ void SlewScope(double raTarget, double decTarget) {
 			  << " Ycount=" << Ycount
 			  << "\n";
 
-	if (Alt < 20.0 || localTargetYPole == 0) {
+	if (Alt < 30.0 || localTargetYPole == 0) {
 		if (Coord* coord = CommUtils::GetCoordPtr()) {
 			coord->RAGoto = 0.0;
 			coord->DecGoto = 0.0;
@@ -61,20 +61,16 @@ void SlewScope(double raTarget, double decTarget) {
 	if (localTargetQuadrant == 1 && quadrant == 1) {
 		std::cout << "SlewScope: executing GoQuad1to1\n";
 		slewStarted = GoQuad1to1(Xcount, Ycount);
-	}
-	else if (localTargetQuadrant == 3 && quadrant == 1) {
+	} else if (localTargetQuadrant == 3 && quadrant == 1) {
 		std::cout << "SlewScope: executing GoQuad1to3\n";
 		slewStarted = GoQuad1to3(Xcount, Ycount, decTarget);
-	}
-	else if (localTargetQuadrant == 3 && quadrant == 3) {
+	} else if (localTargetQuadrant == 3 && quadrant == 3) {
 		std::cout << "SlewScope: executing GoQuad1to3\n";
 		slewStarted = GoQuad1to3(Xcount, Ycount, decTarget);
-	}
-	else if (localTargetQuadrant == 1 && quadrant == 3) {
+	} else if (localTargetQuadrant == 1 && quadrant == 3) {
 		std::cout << "SlewScope: executing GoQuad3to1\n";
 		slewStarted = GoQuad3to1(Xcount, Ycount, decTarget);
-	}
-	else {
+	} else {
 		if (Coord* coord = CommUtils::GetCoordPtr()) {
 			coord->RAGoto = 0.0;
 			coord->DecGoto = 0.0;
