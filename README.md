@@ -203,6 +203,8 @@ This project does not currently use a `tasks.json` file. It can be built directl
 
 The static build is intended to reduce dependency issues by statically linking GCC runtime libraries. The less aggressive build still links the standard GCC runtime libraries statically but does not use full `-static`.
 
+Note: "C:\Program Files\GCC\winlibs-i686-posix-dwarf-gcc-15.2.0-mingw-w64ucrt-13.0.0-r4\mingw32\bin\g++.exe" should link to wherever mingw is installed in the environment. This path likely will not work as is. 
+
 ---
 
 ## Running the Program
