@@ -17,14 +17,32 @@ extern void* pndomem;
 extern double TrkRate;
 extern double RAFact, DECFACT;
 extern double C_Lat, C_Long;
-//extern double SidTimeFract; 
 extern double SidTime;
 extern double RANow, DECNow;
 extern double RaTarget, DecTarget, Meridian, EastHor, WestHor;
 extern double EastHA, WestHA, NorthHA, SouthHA, A, H;
 extern double RaPos, decPos, tdecfact;
 
-// Slew / velocities
+// Normal hand paddle rates
+extern double HandPadRaEastRate;
+extern double HandPadRaWestRate;
+extern double HandPadDecRate;
+
+// DEC bump behavior
+extern int DecBumpRate;
+extern int DecBumpDurationMs;
+
+// Fast paddle speeds
+extern std::string FastPadXSlew;
+extern std::string FastPadYSlew;
+extern std::string FastPadXFine;
+extern std::string FastPadYFine;
+
+// GOTO / slew routine speeds
+extern std::string GotoXSlew;
+extern std::string GotoYSlew;
+
+// Legacy / general axis values
 extern std::string xvlslew, yvlslew, xvl5inch, yvl5inch;
 extern std::string xvl, xac, xacmax, xvlmax, yvl, yac, yacmax, yvlmax;
 
@@ -48,6 +66,11 @@ extern int DECDeg, DECMin, DECSec;
 extern int altdeg, altmin, altsec, azdeg, azmin, azsec;
 
 extern bool Parkit, NorthofZenith, NoPassword;
+extern bool TimerEnabled;
+extern bool lowAltitudeLockout;
+extern bool parkInProgress;
+extern bool parkCompleted;
+
 extern char Response[256];
 
 extern std::string name, commandBuffer;
@@ -68,8 +91,3 @@ extern double SolarParallax;
 // Coordinate system identifiers
 extern int FK4System;
 extern int FK5System;
-
-extern bool TimerEnabled;
-extern bool lowAltitudeLockout;
-extern bool parkInProgress;
-extern bool parkCompleted;

@@ -1,24 +1,24 @@
 #include "GlobalValues.h"
 #include "CommUtils.h"
 #include "StateVar.h"
+
 #include <thread>
 #include <chrono>
 #include <string>
 #include <iostream>
 
-// External helpers
 extern std::string FormatDouble(double v, int w, int p);
 
 void BumpNorth() {
-	SendCommand("AY JG-50;");
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	SendCommand("AY JG-" + std::to_string(DecBumpRate) + ";");
+	std::this_thread::sleep_for(std::chrono::milliseconds(DecBumpDurationMs));
 	SendCommand("AY ST;");
 	LastDecNorth = true;
 }
 
 void BumpSouth() {
-	SendCommand("AY JG50;");
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	SendCommand("AY JG" + std::to_string(DecBumpRate) + ";");
+	std::this_thread::sleep_for(std::chrono::milliseconds(DecBumpDurationMs));
 	SendCommand("AY ST;");
 	LastDecNorth = false;
 }
@@ -27,13 +27,12 @@ void HandleFastPadle() {
 	std::string CmdStr;
 	std::string xspeed, yspeed;
 
-	// Select speed
 	if (!SlewSelect) {
-		xspeed = xvlslew;
-		yspeed = yvlslew;
+		xspeed = FastPadXSlew;
+		yspeed = FastPadYSlew;
 	} else {
-		xspeed = xvl5inch;
-		yspeed = yvl5inch;
+		xspeed = FastPadXFine;
+		yspeed = FastPadYFine;
 	}
 
 	switch (Xstate) {

@@ -47,7 +47,7 @@ void SlewScope(double raTarget, double decTarget) {
 			  << " Ycount=" << Ycount
 			  << "\n";
 
-	if (Alt < 30.0 || localTargetYPole == 0) {
+	if (Alt < 20.0 || localTargetYPole == 0) {
 		if (Coord* coord = CommUtils::GetCoordPtr()) {
 			coord->RAGoto = 0.0;
 			coord->DecGoto = 0.0;

@@ -25,6 +25,19 @@ double RaTarget = 0.0, DecTarget = 0.0, Meridian = 0.0, EastHor = 0.0, WestHor =
 double EastHA = 0.0, WestHA = 0.0, NorthHA = 0.0, SouthHA = 0.0, A = 0.0, H = 0.0;
 double RaPos = 0.0, decPos = 0.0, tdecfact = 0.0;
 
+// Normal hand paddle
+double HandPadRaEastRate = 0.0;
+double HandPadRaWestRate = 0.0;
+double HandPadDecRate = 0.0;
+
+// DEC bump
+int DecBumpRate = 50;
+int DecBumpDurationMs = 100;
+
+// Fast paddle
+std::string FastPadXSlew, FastPadYSlew, FastPadXFine, FastPadYFine;
+
+// Legacy / general axis values
 std::string xvlslew, yvlslew, xvl5inch, yvl5inch;
 std::string xvl, xac, xacmax, xvlmax, yvl, yac, yacmax, yvlmax;
 
@@ -108,10 +121,29 @@ void loadparams() {
 	C_Lat = 38.508741;
 	C_Long = 106.9385583;
 
+	// Normal hand paddle defaults
+	HandPadRaEastRate = TrkRate / 2.0;
+	HandPadRaWestRate = TrkRate + TrkRate / 2.0;
+	HandPadDecRate = TrkRate / 4.0;
+
+	// DEC bump defaults
+	DecBumpRate = 50;
+	DecBumpDurationMs = 100;
+
+	// Fast paddle defaults
+	FastPadXSlew = "75000";
+	FastPadYSlew = "50000";
+	FastPadXFine = "2000";
+	FastPadYFine = "2000";
+
+	// GOTO slews (USED BY QUAD ROUTINES)
 	xvlslew = "75000";
 	yvlslew = "50000";
-	xvl5inch = "2000";
-	yvl5inch = "2000";
+
+	// Keep old globals populated too
+	xvl5inch = FastPadXFine;
+	yvl5inch = FastPadYFine;
+
 	xvl = "10000";
 	xac = "35000";
 	yvl = "5000";
@@ -150,10 +182,10 @@ void RunTimerLoopUntilIdleOrEscape() {
 		}
 
 		if (!parkInProgress && parkCompleted) {
-            std::cout << "Parking complete.\n";
-            parkCompleted = false;
-            break;
-        }
+			std::cout << "Parking complete.\n";
+			parkCompleted = false;
+			break;
+		}
 
 		if (_kbhit()) {
 			int ch = _getch();
@@ -223,6 +255,14 @@ int main() {
 		std::cout << "Connected to device on port " << CommRecord.CommPortNumber << "\n";
 	}
 
+	std::cout << "[INIT] Reset controller\n";
+	SendCommand("RS;");
+	Sleep(5000);
+
+	std::cout << "[INIT] Configure IO + axes\n";
+	SendCommand("EF; IO0,0; AX; DBI; LP0; SC; AY; DBI; LP0; SC;");
+	Sleep(100);
+
 	char buf[64];
 	sprintf(buf, "%.6f", TrkRate);
 
@@ -230,12 +270,13 @@ int main() {
 	std::cout << "[INIT TRACKING] " << cmd << "\n";
 
 	if (!SendCommand(cmd)) {
-	    std::cout << "Failed to start RA tracking!\n";
-    } else {
-        Xstate = StateVar::Tracking;
-        Ystate = StateVar::Tracking;
-        std::cout << "[INIT TRACKING] Xstate/Ystate set to Tracking\n";
-    }
+		std::cout << "Failed to start RA tracking!\n";
+	}
+	else {
+		Xstate = StateVar::Tracking;
+		Ystate = StateVar::Tracking;
+		std::cout << "[INIT TRACKING] Xstate/Ystate set to Tracking\n";
+	}
 
 	ManualControlMenu();
 	UnloadDLL();
