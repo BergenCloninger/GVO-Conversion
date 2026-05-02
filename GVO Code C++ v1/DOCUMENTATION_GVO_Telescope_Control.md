@@ -54,6 +54,8 @@ It is not currently configured for macOS or Linux.
 
 There is currently no `tasks.json`. The project is built directly with the command line.
 
+Note: "C:\Program Files\GCC\winlibs-i686-posix-dwarf-gcc-15.2.0-mingw-w64ucrt-13.0.0-r4\mingw32\bin\g++.exe" should link to wherever mingw is installed in the environment. This path likely will not work as is. 
+
 ---
 
 ## 3. Source Files
