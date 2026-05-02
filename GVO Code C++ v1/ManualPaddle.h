@@ -1,5 +1,5 @@
 #pragma once
 
-void HandleFastPadle();
+void HandleFastPaddle();
 void BumpNorth();
 void BumpSouth();

@@ -1,4 +1,4 @@
-#include "HandPadle.h"
+#include "HandPaddle.h"
 #include "CommUtils.h"
 #include "OMS68SERMC.h"
 #include "CalcCoord.h"
@@ -6,7 +6,7 @@
 #include "StateVar.h"
 #include "utils.h"
 #include "GlobalValues.h"
-#include "ManualPadle.h"
+#include "ManualPaddle.h"
 #include "Bits.h"
 
 #include <string>
@@ -15,7 +15,7 @@
 #include <cctype>
 #include <cstdint>
 
-void HandleHandPadle() {
+void HandleHandPaddle() {
 	if (movingRA || movingDEC) {
 		return;
 	}
@@ -50,7 +50,7 @@ void HandleHandPadle() {
 	WestPushed  = (ioLocal & WestBit)  != 0;
 
 	if (ManualPushed) {
-		HandleFastPadle();
+		HandleFastPaddle();
 		return;
 	}
 

@@ -23,7 +23,7 @@ void BumpSouth() {
 	LastDecNorth = false;
 }
 
-void HandleFastPadle() {
+void HandleFastPaddle() {
 	std::string CmdStr;
 	std::string xspeed, yspeed;
 

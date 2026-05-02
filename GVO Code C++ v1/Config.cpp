@@ -90,13 +90,6 @@ void ApplyConfig() {
 		if (config.count("dec_bump_ms"))
 			DecBumpDurationMs = std::stoi(config["dec_bump_ms"]);
 
-		// Fast paddle
-		if (config.count("fastpad_x_slew"))
-			FastPadXSlew = config["fastpad_x_slew"];
-
-		if (config.count("fastpad_y_slew"))
-			FastPadYSlew = config["fastpad_y_slew"];
-
 		if (config.count("fastpad_x_fine"))
 			FastPadXFine = config["fastpad_x_fine"];
 

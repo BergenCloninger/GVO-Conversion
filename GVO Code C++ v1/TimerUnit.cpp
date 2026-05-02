@@ -7,7 +7,7 @@
 #include "CalcCoord.h"
 #include "CommUtils.h"
 #include "GlobalValues.h"
-#include "HandPadle.h"
+#include "HandPaddle.h"
 #include "OMS68SERMC.h"
 #include "Slew.h"
 #include "Sync.h"
@@ -144,7 +144,7 @@ void TimerUpdate() {
 		parkCompleted = true;
 	}
 
-	HandleHandPadle();
+	HandleHandPaddle();
 }
 
 void PrintCoordState(Coord* c) {
@@ -184,6 +184,6 @@ void AddTicks() {
 	}
 }
 
-void Padle_Timer_Update() {
-	HandleHandPadle();
+void Paddle_Timer_Update() {
+	HandleHandPaddle();
 }
