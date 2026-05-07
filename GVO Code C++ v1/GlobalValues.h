@@ -38,10 +38,6 @@ extern std::string FastPadYSlew;
 extern std::string FastPadXFine;
 extern std::string FastPadYFine;
 
-// GOTO / slew routine speeds
-extern std::string GotoXSlew;
-extern std::string GotoYSlew;
-
 // Legacy / general axis values
 extern std::string xvlslew, yvlslew, xvl5inch, yvl5inch;
 extern std::string xvl, xac, xacmax, xvlmax, yvl, yac, yacmax, yvlmax;

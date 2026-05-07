@@ -73,6 +73,8 @@ void ApplyConfig() {
 		if (config.count("C_Long"))
 			C_Long = std::stod(config["C_Long"]);
 
+		if (config.count("xvlslew"))
+			xvlslew = config["xvlslew"];
 		// Normal hand paddle
 		if (config.count("handpad_ra_east_rate"))
 			HandPadRaEastRate = std::stod(config["handpad_ra_east_rate"]);
@@ -121,6 +123,9 @@ void ApplyConfig() {
 		if (config.count("yvlmax"))
 			yvlmax = config["yvlmax"];
 
+		if (config.count("yvlslew"))
+			yvlslew = config["yvlslew"];
+
 		if (config.count("com_port"))
 			ComPortNumber = std::stoi(config["com_port"]);
 
@@ -141,6 +146,8 @@ void PrintConfig() {
 	std::cout << "RAFact: " << RAFact << "\n";
 	std::cout << "DECFACT: " << DECFACT << "\n";
 	std::cout << "Lat: " << C_Lat << " Long: " << C_Long << "\n";
+	std::cout << "xvlslew: " << xvlslew << "\n";
+	std::cout << "yvlslew: " << yvlslew << "\n";
 
 	std::cout << "Handpad RA east: " << HandPadRaEastRate << "\n";
 	std::cout << "Handpad RA west: " << HandPadRaWestRate << "\n";

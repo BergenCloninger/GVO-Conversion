@@ -49,18 +49,23 @@ void TimerUpdate() {
 			movingRA = false;
 			std::cout << "RA Axis Move Complete\n";
 
-			char buf[64];
-			std::sprintf(buf, "%.6f", TrkRate);
-
-			std::string cmdStr = "AX JF" + std::string(buf) + ";";
-			std::cout << "[TimerUpdate] SEND: [" << cmdStr << "]\n";
-			SendCommand(cmdStr);
-
-			Xstate = StateVar::Tracking;
-			Ystate = StateVar::Tracking;
-			std::cout << "[TimerUpdate] Xstate/Ystate set to Tracking after move complete\n";
-
 			CoordMem->RAGoto = 0.0;
+
+			if (!parkInProgress) {
+				char buf[64];
+				std::sprintf(buf, "%.6f", TrkRate);
+
+				std::string cmdStr = "AX JF" + std::string(buf) + ";";
+				std::cout << "[TimerUpdate] SEND: [" << cmdStr << "]\n";
+				SendCommand(cmdStr);
+
+				Xstate = StateVar::Tracking;
+				Ystate = StateVar::Tracking;
+				std::cout << "[TimerUpdate] Xstate/Ystate set to Tracking after move complete\n";
+			}
+			else {
+				std::cout << "[TimerUpdate] Park move RA complete; not restarting tracking\n";
+			}
 		}
 	}
 
@@ -123,25 +128,35 @@ void TimerUpdate() {
 
 		SendCommand("AX KL;");
 		Sleep(300);
+		std::string parkCmd =
+			"AX AC" + xac + "; "
+			"AY AC" + yac + "; "
+			"AA VL" + xvlslew + "," + yvlslew + "; "
+			"MA0,0,,; GD; ID;";
+			
 		SendCommand("AA VL75000,50000; MA0,0,,; GD; ID;");
 
 		return;
 	}
 
 	if (parkInProgress && !movingRA && !movingDEC) {
-		char buf[64];
-		sprintf(buf, "%.6f", TrkRate);
+		std::cout << "[PARK COMPLETE] Stopping tracking / motors\n";
 
-		std::string cmd = "AX JF" + std::string(buf) + ";";
-		std::cout << "[PARK COMPLETE] " << cmd << "\n";
-		SendCommand(cmd);
+		SendCommand("AA ST;");
+		Sleep(100);
+		SendCommand("AA ST;");
 
-		Xstate = StateVar::Tracking;
-		Ystate = StateVar::Tracking;
-		std::cout << "[PARK COMPLETE] Xstate/Ystate set to Tracking\n";
-				
+		Xstate = StateVar::Off;
+		Ystate = StateVar::Off;
+
+		CoordMem->RAGoto = 0.0;
+		CoordMem->DecGoto = 0.0;
+
 		parkInProgress = false;
 		parkCompleted = true;
+
+		std::cout << "[PARK COMPLETE] Xstate/Ystate set to Off\n";
+		return;
 	}
 
 	HandleHandPaddle();

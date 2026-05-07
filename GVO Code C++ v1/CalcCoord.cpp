@@ -39,10 +39,6 @@ void UpdateCoord() {
 	std::stringstream ss(resp);
 	std::string xStr, yStr;
 
-	// Split the comma-separated response exactly like Pascal TempList.CommaText usage
-	bool gotX = static_cast<bool>(std::getline(ss, xStr, ','));
-	bool gotY = static_cast<bool>(std::getline(ss, yStr, ','));
-
 	double x = 0.0;
 	double y = 0.0;
 
@@ -122,7 +118,7 @@ void UpdateCoord() {
 	GetQandY(RANow, DECNow, Alt, HA, Xcount, Ycount, quadrant, yPole);
 
 	// Safety stop below 30 degrees altitude, same as Pascal behavior
-	if (Alt < 30.0) {
+	if (Alt < 20.0) {
 		SendCommand("AA ST;");   // stop all axes
 
 		coord->RAGoto = 0.0;

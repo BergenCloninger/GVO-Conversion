@@ -131,10 +131,8 @@ void loadparams() {
 	DecBumpDurationMs = 100;
 
 	// Fast paddle defaults
-	FastPadXSlew = "75000";
-	FastPadYSlew = "50000";
-	FastPadXFine = "2000";
-	FastPadYFine = "2000";
+	FastPadXFine = "12000";
+	FastPadYFine = "8000";
 
 	// GOTO slews (USED BY QUAD ROUTINES)
 	xvlslew = "75000";
@@ -232,6 +230,16 @@ void ManualControlMenu() {
 	}
 }
 
+void ConfigureMotionSettings() {
+	std::cout << "[INIT] Configure motion acceleration/ramp\n";
+
+	SendCommand("AY VL" + yvlslew + ";");
+	SendCommand("AY AC" + yac + ";");
+	SendCommand("AX VL" + xvlslew + ";");
+	SendCommand("AX AC" + xac + ";");
+	Sleep(100);
+}
+
 int main() {
 	loadparams();
 	SetStime();
@@ -262,6 +270,8 @@ int main() {
 	std::cout << "[INIT] Configure IO + axes\n";
 	SendCommand("EF; IO0,0; AX; DBI; LP0; SC; AY; DBI; LP0; SC;");
 	Sleep(100);
+
+	ConfigureMotionSettings();
 
 	char buf[64];
 	sprintf(buf, "%.6f", TrkRate);
